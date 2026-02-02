@@ -9,22 +9,96 @@
 <body>
   <div class="container">
 
+    <!-- Topbar -->
     <div class="topbar">
       <div class="brand">
-        <div class="logo">L7</div>
+        <!-- LOGO IMAGE (circle) -->
+        <img class="brand-logo" src="{{ url_for('static', filename='logo.png') }}" alt="Law7aty logo">
+
         <div>
           <h1>Law7aty Workshops</h1>
-          <p>Choose a workshop • Register in 1 minute</p>
+          <p>Art workshops • Acrylic • Pencil • Cups painting</p>
         </div>
       </div>
 
       <div class="actions">
-        <a class="btn" href="{{ url_for('admin_login') }}">Admin</a>
+        <a class="btn" href="#about">About Us</a>
         <a class="btn primary" href="#workshops">Browse Workshops</a>
+        <a class="btn" href="{{ url_for('admin_login') }}">Admin</a>
       </div>
     </div>
 
-    <div id="workshops" class="grid">
+    <!-- Welcome / Hero -->
+    <div class="hero">
+      <div class="hero-text">
+        <h2>Welcome to Law7aty 🎀</h2>
+        <p>
+          A soft, creative space where you learn step-by-step, relax, and leave with something you’re proud of.
+          No experience needed — just your vibe ✨
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn primary" href="#workshops">Register now</a>
+          <a class="btn" href="#about">Meet us</a>
+          <a class="btn" href="{{ instagram_url }}" target="_blank" rel="noopener">Instagram</a>
+        </div>
+
+        <div class="hero-mini">
+          <span class="pill">✨ Beginner-friendly</span>
+          <span class="pill">🎨 Guided step-by-step</span>
+          <span class="pill">💗 Cozy community</span>
+        </div>
+      </div>
+
+      <!-- Hero image (admin-controlled) -->
+      <div class="hero-card">
+        <div class="hero-img">
+          {% if hero_image_url %}
+            <img src="{{ hero_image_url }}" alt="Law7aty welcome">
+          {% else %}
+            <img src="https://via.placeholder.com/900x700.png?text=Law7aty+Welcome" alt="Law7aty welcome">
+          {% endif %}
+        </div>
+        <div class="hero-card-body">
+          <div class="muted">Welcome photo can be updated by admin ✨</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- About Us -->
+    <div class="section" id="about">
+      <h2>About Us</h2>
+      <p class="about-text">
+        <b>Law7aty</b> is an art workshop space designed for anyone who loves creativity — even if you think you “can’t draw”.
+        We focus on simple techniques, calm vibes, and confidence-building. You’ll finish each session with your own artwork.
+      </p>
+
+      <div class="about-grid">
+        <div class="about-item">
+          <div class="about-title">What we offer</div>
+          <div class="muted">Acrylic painting • Pencil drawing • Painting on cups</div>
+        </div>
+        <div class="about-item">
+          <div class="about-title">For who?</div>
+          <div class="muted">Beginners • Teens • Adults • Anyone who wants a soft creative reset</div>
+        </div>
+        <div class="about-item">
+          <div class="about-title">Contact</div>
+          <div class="muted">
+            Instagram:
+            <a href="{{ instagram_url }}" target="_blank" rel="noopener">@law7atiii</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Workshops -->
+    <div class="section" style="margin-top:16px;">
+      <h2 id="workshops">Available Workshops</h2>
+      <p class="muted" style="margin-top:-6px;">Pick a workshop and register in 1 minute.</p>
+    </div>
+
+    <div class="grid">
       {% for w in workshops %}
       <div class="card">
         <div class="cover">
@@ -99,6 +173,10 @@
           </div>
         </div>
       </form>
+    </div>
+
+    <div class="footer-mini">
+      <div class="muted">© Law7aty — made with 💗</div>
     </div>
 
   </div>
