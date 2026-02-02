@@ -20,19 +20,14 @@
 
       <div class="actions">
         <a class="btn" href="{{ url_for('customer_page') }}">Customer Page</a>
+        <a class="btn" href="{{ url_for('admin_logout') }}">Logout</a>
         <a class="btn primary" href="#add">Add Workshop</a>
       </div>
     </div>
 
-    {% if message %}
-      <div class="section" style="margin-top:14px;">
-        <div class="notice">{{ message }}</div>
-      </div>
-    {% endif %}
-
     <!-- Add workshop -->
     <div class="section" id="add">
-      <h2>Add new workshop</h2>
+      <h2>Add new workshop / course</h2>
 
       <form action="{{ url_for('admin_add_workshop') }}" method="POST" enctype="multipart/form-data">
         <div class="form-row">
@@ -47,18 +42,23 @@
           </div>
 
           <div class="field third">
-            <label>Date</label>
-            <input name="date" required placeholder="e.g., 2026-02-10">
+            <label>Date (optional)</label>
+            <input name="date" placeholder="e.g., 2026-02-10">
           </div>
 
           <div class="field third">
-            <label>Time</label>
-            <input name="time" required placeholder="e.g., 18:00">
+            <label>Time (optional)</label>
+            <input name="time" placeholder="e.g., 18:00">
           </div>
 
           <div class="field third">
             <label>Total seats</label>
             <input name="seats_total" type="number" min="1" required placeholder="e.g., 15">
+          </div>
+
+          <div class="field third">
+            <label>Number of lessons (optional)</label>
+            <input name="lessons_count" type="number" min="1" placeholder="e.g., 6">
           </div>
 
           <div class="field full">
@@ -72,16 +72,17 @@
           </div>
 
           <div class="field">
-            <label>Workshop photo (upload)</label>
+            <label>Workshop photo (upload, optional)</label>
             <input name="image" type="file" accept="image/*">
           </div>
 
           <div class="field full">
-            <button class="btn primary" type="submit">Post Workshop ➕</button>
+            <button class="btn primary" type="submit">Post ➕</button>
           </div>
         </div>
       </form>
-      <p class="muted">No price shown (as you requested).</p>
+
+      <p class="muted">No price is shown (as requested).</p>
     </div>
 
     <hr class="hr"/>
@@ -108,12 +109,20 @@
 
           <div class="card-body">
             <h3 class="title">{{ w.title }}</h3>
+
             <div class="meta">
-              <span class="pill">📅 {{ w.date }}</span>
-              <span class="pill">⏰ {{ w.time }}</span>
-              <span class="pill">📍 {{ w.location }}</span>
+              {% if w.date %}<span class="pill">📅 {{ w.date }}</span>{% endif %}
+              {% if w.time %}<span class="pill">⏰ {{ w.time }}</span>{% endif %}
+              {% if w.location %}<span class="pill">📍 {{ w.location }}</span>{% endif %}
+              {% if w.lessons_count %}<span class="pill">📚 {{ w.lessons_count }} lessons</span>{% endif %}
             </div>
+
             <p class="desc">{{ w.description }}</p>
+
+            {% if w.age_range %}
+              <div class="muted">Recommended age: {{ w.age_range }}</div>
+            {% endif %}
+
             <div class="muted">Workshop ID: {{ w.id }}</div>
           </div>
 
@@ -124,9 +133,17 @@
 
             <div style="display:flex; gap:8px;">
               <button class="btn small" type="button"
-                onclick="openEdit('{{ w.id }}',
-                  '{{ w.title|e }}','{{ w.location|e }}','{{ w.date|e }}','{{ w.time|e }}',
-                  '{{ w.seats_total }}','{{ w.age_range|default('', true)|e }}','{{ w.description|e }}')">
+                onclick="openEdit(
+                  '{{ w.id }}',
+                  '{{ w.title|e }}',
+                  '{{ w.location|e }}',
+                  '{{ w.date|default('', true)|e }}',
+                  '{{ w.time|default('', true)|e }}',
+                  '{{ w.seats_total }}',
+                  '{{ w.lessons_count|default('', true) }}',
+                  '{{ w.age_range|default('', true)|e }}',
+                  '{{ w.description|e }}'
+                )">
                 Edit
               </button>
 
@@ -160,18 +177,23 @@
           </div>
 
           <div class="field third">
-            <label>Date</label>
-            <input name="date" id="edit_date" required>
+            <label>Date (optional)</label>
+            <input name="date" id="edit_date" placeholder="e.g., 2026-02-10">
           </div>
 
           <div class="field third">
-            <label>Time</label>
-            <input name="time" id="edit_time" required>
+            <label>Time (optional)</label>
+            <input name="time" id="edit_time" placeholder="e.g., 18:00">
           </div>
 
           <div class="field third">
             <label>Total seats</label>
             <input name="seats_total" id="edit_seats" type="number" min="1" required>
+          </div>
+
+          <div class="field third">
+            <label>Number of lessons (optional)</label>
+            <input name="lessons_count" id="edit_lessons" type="number" min="1" placeholder="e.g., 6">
           </div>
 
           <div class="field">
@@ -200,13 +222,14 @@
   </div>
 
   <script>
-    function openEdit(id, title, location, date, time, seats_total, age_range, description){
+    function openEdit(id, title, location, date, time, seats_total, lessons_count, age_range, description){
       document.getElementById('edit_id').value = id;
       document.getElementById('edit_title').value = title;
       document.getElementById('edit_location').value = location;
-      document.getElementById('edit_date').value = date;
-      document.getElementById('edit_time').value = time;
+      document.getElementById('edit_date').value = date || "";
+      document.getElementById('edit_time').value = time || "";
       document.getElementById('edit_seats').value = seats_total;
+      document.getElementById('edit_lessons').value = lessons_count || "";
       document.getElementById('edit_age_range').value = age_range || "";
       document.getElementById('edit_desc').value = description;
 
