@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Registrations</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="container">
+
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">📋</div>
+        <div>
+          <h1>Registrations — {{ workshop.title }}</h1>
+          <p>{{ workshop.date }} • {{ workshop.time }} • {{ workshop.location }}</p>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn" href="{{ url_for('admin_page') }}">Back to Admin</a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>People registered</h2>
+
+      {% if registrations|length == 0 %}
+        <div class="notice">No one registered yet.</div>
+      {% else %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Age</th>
+              <th>Notes</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in registrations %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ r.name }}</td>
+              <td>{{ r.phone }}</td>
+              <td>{{ r.age }}</td>
+              <td>{{ r.notes }}</td>
+              <td>{{ r.created_at }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </div>
+
+  </div>
+</body>
+</html>
