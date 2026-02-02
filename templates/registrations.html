@@ -14,11 +14,16 @@
         <div class="logo">📋</div>
         <div>
           <h1>Registrations — {{ workshop.title }}</h1>
-          <p>{{ workshop.date }} • {{ workshop.time }} • {{ workshop.location }}</p>
+          <p>
+            {% if workshop.date %}{{ workshop.date }}{% endif %}
+            {% if workshop.time %} • {{ workshop.time }}{% endif %}
+            {% if workshop.location %} • {{ workshop.location }}{% endif %}
+          </p>
         </div>
       </div>
       <div class="actions">
         <a class="btn" href="{{ url_for('admin_page') }}">Back to Admin</a>
+        <a class="btn" href="{{ url_for('admin_logout') }}">Logout</a>
       </div>
     </div>
 
@@ -36,9 +41,13 @@
               <th>Phone</th>
               <th>Age</th>
               <th>Notes</th>
-              <th>Time</th>
+              <th>Registered at</th>
+              <th>Status</th>
+              <th>Paid amount</th>
+              <th>Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {% for r in registrations %}
             <tr>
@@ -48,6 +57,64 @@
               <td>{{ r.age }}</td>
               <td>{{ r.notes }}</td>
               <td>{{ r.created_at }}</td>
+
+              <td>
+                <!-- Contacted toggle -->
+                <form style="display:inline;" method="POST"
+                      action="{{ url_for('admin_toggle_registration', reg_id=r.id) }}">
+                  <input type="hidden" name="field" value="contacted">
+                  {% if r.contacted %}
+                    <button class="btn small" type="submit">Contacted ✅</button>
+                  {% else %}
+                    <button class="btn small" type="submit">Contacted ❌</button>
+                  {% endif %}
+                </form>
+
+                <!-- Canceled toggle -->
+                <form style="display:inline;" method="POST"
+                      action="{{ url_for('admin_toggle_registration', reg_id=r.id) }}">
+                  <input type="hidden" name="field" value="canceled">
+                  {% if r.canceled %}
+                    <button class="btn small danger" type="submit">Canceled ✅</button>
+                  {% else %}
+                    <button class="btn small" type="submit">Canceled ❌</button>
+                  {% endif %}
+                </form>
+
+                <!-- Paid toggle -->
+                <form style="display:inline;" method="POST"
+                      action="{{ url_for('admin_toggle_registration', reg_id=r.id) }}">
+                  <input type="hidden" name="field" value="paid">
+                  {% if r.paid %}
+                    <button class="btn small primary" type="submit">Paid ✅</button>
+                  {% else %}
+                    <button class="btn small" type="submit">Paid ❌</button>
+                  {% endif %}
+                </form>
+              </td>
+
+              <td>
+                {% if r.paid %}
+                  <form method="POST" action="{{ url_for('admin_set_paid_amount', reg_id=r.id) }}"
+                        style="display:flex; gap:8px; align-items:center; margin:0;">
+                    <input name="paid_amount" inputmode="decimal"
+                           placeholder="e.g., 120"
+                           value="{{ r.paid_amount if r.paid_amount is not none else '' }}"
+                           style="max-width:120px;">
+                    <button class="btn small primary" type="submit">Save</button>
+                  </form>
+                {% else %}
+                  <span class="muted">—</span>
+                {% endif %}
+              </td>
+
+              <td>
+                <form method="POST" action="{{ url_for('admin_delete_registration', reg_id=r.id) }}"
+                      style="margin:0;"
+                      onsubmit="return confirm('Delete this registration?');">
+                  <button class="btn small danger" type="submit">Delete</button>
+                </form>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
