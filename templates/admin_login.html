@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Law7aty — Admin Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">🔐</div>
+        <div>
+          <h1>Admin Login</h1>
+          <p>Enter password to manage workshops</p>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn" href="{{ url_for('customer_page') }}">Back</a>
+      </div>
+    </div>
+
+    <div class="section" style="max-width:520px; margin:16px auto 0;">
+      {% if message %}
+        <div class="notice" style="margin-bottom:12px;">{{ message }}</div>
+      {% endif %}
+
+      <form method="POST">
+        <div class="form-row">
+          <div class="field full">
+            <label>Password</label>
+            <input type="password" name="password" required placeholder="••••••••">
+          </div>
+
+          <div class="field full">
+            <button class="btn primary" type="submit">Login</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
