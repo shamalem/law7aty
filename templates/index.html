@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Law7aty — Workshops</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="container">
+
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">L7</div>
+        <div>
+          <h1>Law7aty Workshops</h1>
+          <p>Choose a workshop • Register in 1 minute</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <!-- optional: link to admin -->
+        <a class="btn" href="{{ url_for('admin_page') }}">Admin</a>
+        <a class="btn primary" href="#workshops">Browse Workshops</a>
+      </div>
+    </div>
+
+    {% if message %}
+      <div class="section" style="margin-top:14px;">
+        <div class="notice">{{ message }}</div>
+      </div>
+    {% endif %}
+
+    <div id="workshops" class="grid">
+      {% for w in workshops %}
+      <div class="card">
+        <div class="cover">
+          {% if w.image_url %}
+            <img src="{{ w.image_url }}" alt="workshop image">
+          {% else %}
+            <img src="https://via.placeholder.com/1000x600.png?text=Law7aty+Workshop" alt="placeholder">
+          {% endif %}
+          <div class="badge">Seats: {{ w.seats_left }} left</div>
+        </div>
+
+        <div class="card-body">
+          <h3 class="title">{{ w.title }}</h3>
+
+          <div class="meta">
+            <span class="pill">📅 {{ w.date }}</span>
+            <span class="pill">⏰ {{ w.time }}</span>
+            <span class="pill">📍 {{ w.location }}</span>
+          </div>
+
+          <p class="desc">{{ w.description }}</p>
+
+          {% if w.age_range %}
+            <div class="muted">Recommended age: {{ w.age_range }}</div>
+          {% endif %}
+        </div>
+
+        <div class="card-footer">
+          <span class="muted">Workshop ID: {{ w.id }}</span>
+
+          <!-- Register form -->
+          <form action="{{ url_for('register') }}" method="POST" style="margin:0; display:flex; gap:8px;">
+            <input type="hidden" name="workshop_id" value="{{ w.id }}">
+            <button class="btn primary" type="button"
+              onclick="openRegister('{{ w.id }}','{{ w.title|e }}')">
+              Register
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Registration section -->
+    <div class="section" id="registerBox" style="display:none;">
+      <h2 id="regTitle">Register</h2>
+      <p class="muted" style="margin-top:-6px;">Fill your details and we’ll save your spot.</p>
+
+      <form action="{{ url_for('register') }}" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="workshop_id" id="workshop_id">
+
+        <div class="form-row">
+          <div class="field">
+            <label>Your full name</label>
+            <input name="name" required placeholder="e.g., Sham Alem">
+          </div>
+
+          <div class="field">
+            <label>Phone number</label>
+            <input name="phone" required placeholder="e.g., 05X-XXXXXXX">
+          </div>
+
+          <div class="field third">
+            <label>Age</label>
+            <input name="age" type="number" min="4" max="120" required placeholder="e.g., 18">
+          </div>
+
+          <div class="field">
+            <label>Notes (optional)</label>
+            <input name="notes" placeholder="Anything we should know?">
+          </div>
+
+          <div class="field full">
+            <button class="btn primary" type="submit">Confirm Registration ✅</button>
+            <button class="btn" type="button" onclick="closeRegister()">Cancel</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+  </div>
+
+  <script>
+    function openRegister(id, title){
+      document.getElementById('workshop_id').value = id;
+      document.getElementById('regTitle').textContent = "Register — " + title;
+      document.getElementById('registerBox').style.display = "block";
+      document.getElementById('registerBox').scrollIntoView({behavior:"smooth"});
+    }
+    function closeRegister(){
+      document.getElementById('registerBox').style.display = "none";
+    }
+  </script>
+</body>
+</html>
