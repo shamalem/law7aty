@@ -10,13 +10,9 @@ from flask import Flask, render_template, request, redirect, url_for, session
 # ---------------------------
 app = Flask(__name__)
 
-# Sessions (REQUIRED)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
-
-# Admin password (set in Render env vars!)
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "1234")  # change locally
 
-# Uploads
 app.config["UPLOAD_FOLDER"] = "static/uploads"
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
@@ -32,10 +28,19 @@ def get_db():
     return conn
 
 
+def _safe_add_column(cur, table, col_def_sql):
+    # col_def_sql example: "contacted INTEGER DEFAULT 0"
+    try:
+        cur.execute(f"ALTER TABLE {table} ADD COLUMN {col_def_sql}")
+    except Exception:
+        pass
+
+
 def init_db():
     conn = get_db()
     cur = conn.cursor()
 
+    # Workshops
     cur.execute("""
     CREATE TABLE IF NOT EXISTS workshops (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,6 +56,7 @@ def init_db():
     )
     """)
 
+    # Registrations
     cur.execute("""
     CREATE TABLE IF NOT EXISTS registrations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,15 +65,20 @@ def init_db():
         phone TEXT,
         age INTEGER,
         notes TEXT,
-        created_at TEXT
+        created_at TEXT,
+        contacted INTEGER DEFAULT 0,
+        canceled INTEGER DEFAULT 0,
+        paid INTEGER DEFAULT 0,
+        paid_amount REAL
     )
     """)
 
-    # If older DB existed without lessons_count, add it safely
-    try:
-        cur.execute("ALTER TABLE workshops ADD COLUMN lessons_count INTEGER")
-    except Exception:
-        pass
+    # Backward-compatible upgrades (if DB already existed)
+    _safe_add_column(cur, "workshops", "lessons_count INTEGER")
+    _safe_add_column(cur, "registrations", "contacted INTEGER DEFAULT 0")
+    _safe_add_column(cur, "registrations", "canceled INTEGER DEFAULT 0")
+    _safe_add_column(cur, "registrations", "paid INTEGER DEFAULT 0")
+    _safe_add_column(cur, "registrations", "paid_amount REAL")
 
     conn.commit()
     conn.close()
@@ -107,7 +118,6 @@ def customer_page():
         reg_count = int(w["reg_count"] or 0)
         seats_total = int(w["seats_total"] or 0)
         seats_left = max(0, seats_total - reg_count)
-
         enriched.append(dict(w, seats_left=seats_left))
 
     return render_template("index.html", workshops=enriched)
@@ -127,8 +137,8 @@ def register():
     conn = get_db()
     conn.execute("""
         INSERT INTO registrations
-        (workshop_id, name, phone, age, notes, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (workshop_id, name, phone, age, notes, created_at, contacted, canceled, paid, paid_amount)
+        VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, NULL)
     """, (
         workshop_id,
         name,
@@ -189,19 +199,18 @@ def admin_add_workshop():
     description = request.form.get("description", "").strip()
     location = request.form.get("location", "").strip()
 
-    date = request.form.get("date", "").strip()      # optional
-    time = request.form.get("time", "").strip()      # optional
+    date = request.form.get("date", "").strip()
+    time = request.form.get("time", "").strip()
 
     seats_total = request.form.get("seats_total", "").strip()
     age_range = request.form.get("age_range", "").strip()
 
-    lessons = request.form.get("lessons_count", "").strip()  # optional
+    lessons = request.form.get("lessons_count", "").strip()
     lessons_val = int(lessons) if lessons.isdigit() else None
 
     if not (title and description and location and seats_total.isdigit()):
         return redirect(url_for("admin_page"))
 
-    # Image upload
     image = request.files.get("image")
     image_url = ""
     if image and image.filename:
@@ -216,15 +225,8 @@ def admin_add_workshop():
         (title, description, location, date, time, seats_total, lessons_count, age_range, image_url)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        title,
-        description,
-        location,
-        date,
-        time,
-        int(seats_total),
-        lessons_val,
-        age_range,
-        image_url
+        title, description, location, date, time,
+        int(seats_total), lessons_val, age_range, image_url
     ))
     conn.commit()
     conn.close()
@@ -241,19 +243,18 @@ def admin_update_workshop():
     description = request.form.get("description", "").strip()
     location = request.form.get("location", "").strip()
 
-    date = request.form.get("date", "").strip()      # optional
-    time = request.form.get("time", "").strip()      # optional
+    date = request.form.get("date", "").strip()
+    time = request.form.get("time", "").strip()
 
     seats_total = request.form.get("seats_total", "").strip()
     age_range = request.form.get("age_range", "").strip()
 
-    lessons = request.form.get("lessons_count", "").strip()  # optional
+    lessons = request.form.get("lessons_count", "").strip()
     lessons_val = int(lessons) if lessons.isdigit() else None
 
     if not (workshop_id.isdigit() and title and description and location and seats_total.isdigit()):
         return redirect(url_for("admin_page"))
 
-    # Optional new image
     image = request.files.get("image")
     new_image_url = None
     if image and image.filename:
@@ -288,7 +289,6 @@ def admin_update_workshop():
 
     conn.commit()
     conn.close()
-
     return redirect(url_for("admin_page"))
 
 
@@ -321,6 +321,87 @@ def admin_view_registrations(workshop_id):
     conn.close()
 
     return render_template("registrations.html", workshop=workshop, registrations=registrations)
+
+
+# ---------------------------
+# Registration management (admin)
+# ---------------------------
+@app.route("/admin/registrations/<int:reg_id>/toggle", methods=["POST"])
+@admin_required
+def admin_toggle_registration(reg_id):
+    field = request.form.get("field", "")
+    if field not in ("contacted", "canceled", "paid"):
+        return redirect(request.referrer or url_for("admin_page"))
+
+    conn = get_db()
+    row = conn.execute("SELECT workshop_id, contacted, canceled, paid FROM registrations WHERE id=?", (reg_id,)).fetchone()
+    if not row:
+        conn.close()
+        return redirect(url_for("admin_page"))
+
+    new_val = 0 if int(row[field] or 0) == 1 else 1
+
+    # if paid turned OFF -> clear amount
+    if field == "paid" and new_val == 0:
+        conn.execute("UPDATE registrations SET paid=?, paid_amount=NULL WHERE id=?", (new_val, reg_id))
+    else:
+        conn.execute(f"UPDATE registrations SET {field}=? WHERE id=?", (new_val, reg_id))
+
+    conn.commit()
+    workshop_id = int(row["workshop_id"])
+    conn.close()
+
+    return redirect(url_for("admin_view_registrations", workshop_id=workshop_id))
+
+
+@app.route("/admin/registrations/<int:reg_id>/set_paid_amount", methods=["POST"])
+@admin_required
+def admin_set_paid_amount(reg_id):
+    amount_raw = (request.form.get("paid_amount") or "").strip()
+
+    conn = get_db()
+    row = conn.execute("SELECT workshop_id, paid FROM registrations WHERE id=?", (reg_id,)).fetchone()
+    if not row:
+        conn.close()
+        return redirect(url_for("admin_page"))
+
+    workshop_id = int(row["workshop_id"])
+
+    # Only allow amount if paid = 1
+    if int(row["paid"] or 0) != 1:
+        conn.close()
+        return redirect(url_for("admin_view_registrations", workshop_id=workshop_id))
+
+    amount_val = None
+    try:
+        amount_val = float(amount_raw)
+        if amount_val < 0:
+            amount_val = None
+    except Exception:
+        amount_val = None
+
+    conn.execute("UPDATE registrations SET paid_amount=? WHERE id=?", (amount_val, reg_id))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("admin_view_registrations", workshop_id=workshop_id))
+
+
+@app.route("/admin/registrations/<int:reg_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_registration(reg_id):
+    conn = get_db()
+    row = conn.execute("SELECT workshop_id FROM registrations WHERE id=?", (reg_id,)).fetchone()
+    if not row:
+        conn.close()
+        return redirect(url_for("admin_page"))
+
+    workshop_id = int(row["workshop_id"])
+    conn.execute("DELETE FROM registrations WHERE id=?", (reg_id,))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("admin_view_registrations", workshop_id=workshop_id))
 
 
 # ---------------------------
