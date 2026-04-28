@@ -1,51 +1,60 @@
 import os
-import sqlite3
 from datetime import datetime
 from functools import wraps
+from pathlib import Path
 
-from flask import Flask, render_template, request, redirect, url_for, session
+import psycopg2
+import psycopg2.extras
+from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
+from werkzeug.utils import secure_filename
 
-# ---------------------------
-# App config
-# ---------------------------
+
 app = Flask(__name__)
 
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "1234")  # local fallback
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "1234")
 
-app.config["UPLOAD_FOLDER"] = "static/uploads"
-os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-DB_PATH = "law7aty.db"
+# On Render Disk, set this env var to: /var/data/uploads
+UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "static/uploads")
+Path(UPLOAD_FOLDER).mkdir(parents=True, exist_ok=True)
 
-# Instagram URL (you gave)
 INSTAGRAM_URL = os.environ.get(
     "INSTAGRAM_URL",
     "https://www.instagram.com/law7atiii?igsh=MXN5YnQ0bTM0c3l3Zg%3D%3D&utm_source=qr"
 )
 
+
 # ---------------------------
 # Database helpers
 # ---------------------------
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is missing. Add it in Render Environment Variables.")
+
+    return psycopg2.connect(
+        DATABASE_URL,
+        cursor_factory=psycopg2.extras.RealDictCursor
+    )
+
 
 def _safe_add_column(cur, table, col_def_sql):
     try:
         cur.execute(f"ALTER TABLE {table} ADD COLUMN {col_def_sql}")
+    except psycopg2.errors.DuplicateColumn:
+        cur.connection.rollback()
     except Exception:
-        pass
+        cur.connection.rollback()
+
 
 def init_db():
     conn = get_db()
     cur = conn.cursor()
 
-    # Workshops table
     cur.execute("""
     CREATE TABLE IF NOT EXISTS workshops (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         title TEXT,
         description TEXT,
         location TEXT,
@@ -58,10 +67,9 @@ def init_db():
     )
     """)
 
-    # Registrations table
     cur.execute("""
     CREATE TABLE IF NOT EXISTS registrations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         workshop_id INTEGER,
         name TEXT,
         phone TEXT,
@@ -75,32 +83,48 @@ def init_db():
     )
     """)
 
-    # Settings table (one row)
     cur.execute("""
     CREATE TABLE IF NOT EXISTS settings (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
+        id INTEGER PRIMARY KEY,
         hero_image_url TEXT
     )
     """)
 
-    # Backward compatible adds
-    _safe_add_column(cur, "workshops", "lessons_count INTEGER")
-    _safe_add_column(cur, "registrations", "contacted INTEGER DEFAULT 0")
-    _safe_add_column(cur, "registrations", "canceled INTEGER DEFAULT 0")
-    _safe_add_column(cur, "registrations", "paid INTEGER DEFAULT 0")
-    _safe_add_column(cur, "registrations", "paid_amount REAL")
-    _safe_add_column(cur, "settings", "hero_image_url TEXT")
-
-    # Ensure settings row exists
-    cur.execute("INSERT OR IGNORE INTO settings (id, hero_image_url) VALUES (1, '')")
-
     conn.commit()
+
+    cur.execute("INSERT INTO settings (id, hero_image_url) VALUES (1, '') ON CONFLICT (id) DO NOTHING")
+    conn.commit()
+
+    cur.close()
     conn.close()
+
 
 init_db()
 
+
 # ---------------------------
-# Admin auth helper
+# Upload helpers
+# ---------------------------
+def save_uploaded_file(file, prefix="img"):
+    if not file or not file.filename:
+        return ""
+
+    filename = secure_filename(file.filename)
+    filename = f"{prefix}_{int(datetime.now().timestamp())}_{filename}"
+
+    path = Path(UPLOAD_FOLDER) / filename
+    file.save(path)
+
+    return url_for("uploaded_file", filename=filename)
+
+
+@app.route("/uploads/<path:filename>")
+def uploaded_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+
+# ---------------------------
+# Admin auth
 # ---------------------------
 def admin_required(fn):
     @wraps(fn)
@@ -110,21 +134,31 @@ def admin_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
+
 # ---------------------------
-# CUSTOMER ROUTES
+# Customer routes
 # ---------------------------
 @app.route("/")
 def customer_page():
     conn = get_db()
+    cur = conn.cursor()
 
-    workshops = conn.execute("""
+    cur.execute("""
         SELECT w.*,
-        (SELECT COUNT(*) FROM registrations r WHERE r.workshop_id = w.id) AS reg_count
+        (
+            SELECT COUNT(*)
+            FROM registrations r
+            WHERE r.workshop_id = w.id
+        ) AS reg_count
         FROM workshops w
         ORDER BY COALESCE(w.date, '') ASC, w.id DESC
-    """).fetchall()
+    """)
+    workshops = cur.fetchall()
 
-    settings = conn.execute("SELECT hero_image_url FROM settings WHERE id=1").fetchone()
+    cur.execute("SELECT hero_image_url FROM settings WHERE id = 1")
+    settings = cur.fetchone()
+
+    cur.close()
     conn.close()
 
     hero_image_url = settings["hero_image_url"] if settings and settings["hero_image_url"] else ""
@@ -134,7 +168,10 @@ def customer_page():
         reg_count = int(w["reg_count"] or 0)
         seats_total = int(w["seats_total"] or 0)
         seats_left = max(0, seats_total - reg_count)
-        enriched.append(dict(w, seats_left=seats_left))
+
+        item = dict(w)
+        item["seats_left"] = seats_left
+        enriched.append(item)
 
     return render_template(
         "index.html",
@@ -142,6 +179,7 @@ def customer_page():
         hero_image_url=hero_image_url,
         instagram_url=INSTAGRAM_URL
     )
+
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -155,81 +193,107 @@ def register():
         return redirect(url_for("customer_page"))
 
     conn = get_db()
-    conn.execute("""
+    cur = conn.cursor()
+
+    cur.execute("""
         INSERT INTO registrations
         (workshop_id, name, phone, age, notes, created_at, contacted, canceled, paid, paid_amount)
-        VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, NULL)
+        VALUES (%s, %s, %s, %s, %s, %s, 0, 0, 0, NULL)
     """, (
-        workshop_id,
+        int(workshop_id),
         name,
         phone,
         int(age),
         notes,
         datetime.now().strftime("%Y-%m-%d %H:%M")
     ))
+
     conn.commit()
+    cur.close()
     conn.close()
 
     return redirect(url_for("customer_page"))
 
+
 # ---------------------------
-# ADMIN LOGIN/LOGOUT
+# Admin login/logout
 # ---------------------------
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     msg = ""
+
     if request.method == "POST":
         password = request.form.get("password", "")
+
         if password == ADMIN_PASSWORD:
             session["is_admin"] = True
             return redirect(url_for("admin_page"))
-        msg = "Wrong password ❌"
+
+        msg = "كلمة المرور غير صحيحة ❌"
+
     return render_template("admin_login.html", message=msg)
+
 
 @app.route("/admin/logout")
 def admin_logout():
     session.clear()
     return redirect(url_for("customer_page"))
 
+
 # ---------------------------
-# ADMIN ROUTES
+# Admin routes
 # ---------------------------
 @app.route("/admin")
 @admin_required
 def admin_page():
     conn = get_db()
-    workshops = conn.execute("""
+    cur = conn.cursor()
+
+    cur.execute("""
         SELECT w.*,
-        (SELECT COUNT(*) FROM registrations r WHERE r.workshop_id = w.id) AS reg_count
+        (
+            SELECT COUNT(*)
+            FROM registrations r
+            WHERE r.workshop_id = w.id
+        ) AS reg_count
         FROM workshops w
         ORDER BY COALESCE(w.date, '') ASC, w.id DESC
-    """).fetchall()
+    """)
+    workshops = cur.fetchall()
 
-    settings = conn.execute("SELECT hero_image_url FROM settings WHERE id=1").fetchone()
+    cur.execute("SELECT hero_image_url FROM settings WHERE id = 1")
+    settings = cur.fetchone()
+
+    cur.close()
     conn.close()
 
     hero_image_url = settings["hero_image_url"] if settings and settings["hero_image_url"] else ""
 
-    return render_template("admin.html", workshops=workshops, hero_image_url=hero_image_url)
+    return render_template(
+        "admin.html",
+        workshops=workshops,
+        hero_image_url=hero_image_url
+    )
+
 
 @app.route("/admin/settings/hero", methods=["POST"])
 @admin_required
 def admin_update_hero():
     image = request.files.get("hero_image")
+    hero_url = save_uploaded_file(image, "hero")
 
-    hero_url = ""
-    if image and image.filename:
-        filename = f"hero_{int(datetime.now().timestamp())}_{image.filename}"
-        path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        image.save(path)
-        hero_url = "/" + path.replace("\\", "/")
+    if hero_url:
+        conn = get_db()
+        cur = conn.cursor()
 
-    conn = get_db()
-    conn.execute("UPDATE settings SET hero_image_url=? WHERE id=1", (hero_url,))
-    conn.commit()
-    conn.close()
+        cur.execute("UPDATE settings SET hero_image_url = %s WHERE id = 1", (hero_url,))
+
+        conn.commit()
+        cur.close()
+        conn.close()
 
     return redirect(url_for("admin_page"))
+
 
 @app.route("/admin/workshops/add", methods=["POST"])
 @admin_required
@@ -238,39 +302,46 @@ def admin_add_workshop():
     description = request.form.get("description", "").strip()
     location = request.form.get("location", "").strip()
 
-    date = request.form.get("date", "").strip()   # optional
-    time = request.form.get("time", "").strip()   # optional
+    date = request.form.get("date", "").strip()
+    time = request.form.get("time", "").strip()
 
     seats_total = request.form.get("seats_total", "").strip()
     age_range = request.form.get("age_range", "").strip()
 
-    lessons = request.form.get("lessons_count", "").strip()  # optional
+    lessons = request.form.get("lessons_count", "").strip()
     lessons_val = int(lessons) if lessons.isdigit() else None
 
     if not (title and description and location and seats_total.isdigit()):
         return redirect(url_for("admin_page"))
 
     image = request.files.get("image")
-    image_url = ""
-    if image and image.filename:
-        filename = f"{int(datetime.now().timestamp())}_{image.filename}"
-        path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        image.save(path)
-        image_url = "/" + path.replace("\\", "/")
+    image_url = save_uploaded_file(image, "workshop")
 
     conn = get_db()
-    conn.execute("""
+    cur = conn.cursor()
+
+    cur.execute("""
         INSERT INTO workshops
         (title, description, location, date, time, seats_total, lessons_count, age_range, image_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """, (
-        title, description, location, date, time,
-        int(seats_total), lessons_val, age_range, image_url
+        title,
+        description,
+        location,
+        date,
+        time,
+        int(seats_total),
+        lessons_val,
+        age_range,
+        image_url
     ))
+
     conn.commit()
+    cur.close()
     conn.close()
 
     return redirect(url_for("admin_page"))
+
 
 @app.route("/admin/workshops/update", methods=["POST"])
 @admin_required
@@ -294,102 +365,163 @@ def admin_update_workshop():
         return redirect(url_for("admin_page"))
 
     image = request.files.get("image")
-    new_image_url = None
-    if image and image.filename:
-        filename = f"{int(datetime.now().timestamp())}_{image.filename}"
-        path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        image.save(path)
-        new_image_url = "/" + path.replace("\\", "/")
+    new_image_url = save_uploaded_file(image, "workshop")
 
     conn = get_db()
+    cur = conn.cursor()
+
     if new_image_url:
-        conn.execute("""
+        cur.execute("""
             UPDATE workshops
-            SET title=?, description=?, location=?, date=?, time=?,
-                seats_total=?, lessons_count=?, age_range=?, image_url=?
-            WHERE id=?
+            SET title = %s,
+                description = %s,
+                location = %s,
+                date = %s,
+                time = %s,
+                seats_total = %s,
+                lessons_count = %s,
+                age_range = %s,
+                image_url = %s
+            WHERE id = %s
         """, (
-            title, description, location, date, time,
-            int(seats_total), lessons_val, age_range, new_image_url,
+            title,
+            description,
+            location,
+            date,
+            time,
+            int(seats_total),
+            lessons_val,
+            age_range,
+            new_image_url,
             int(workshop_id)
         ))
     else:
-        conn.execute("""
+        cur.execute("""
             UPDATE workshops
-            SET title=?, description=?, location=?, date=?, time=?,
-                seats_total=?, lessons_count=?, age_range=?
-            WHERE id=?
+            SET title = %s,
+                description = %s,
+                location = %s,
+                date = %s,
+                time = %s,
+                seats_total = %s,
+                lessons_count = %s,
+                age_range = %s
+            WHERE id = %s
         """, (
-            title, description, location, date, time,
-            int(seats_total), lessons_val, age_range,
+            title,
+            description,
+            location,
+            date,
+            time,
+            int(seats_total),
+            lessons_val,
+            age_range,
             int(workshop_id)
         ))
 
     conn.commit()
+    cur.close()
     conn.close()
+
     return redirect(url_for("admin_page"))
+
 
 @app.route("/admin/workshops/delete", methods=["POST"])
 @admin_required
 def admin_delete_workshop():
     workshop_id = request.form.get("workshop_id", "").strip()
+
     if not workshop_id.isdigit():
         return redirect(url_for("admin_page"))
 
     conn = get_db()
-    conn.execute("DELETE FROM registrations WHERE workshop_id=?", (int(workshop_id),))
-    conn.execute("DELETE FROM workshops WHERE id=?", (int(workshop_id),))
+    cur = conn.cursor()
+
+    cur.execute("DELETE FROM registrations WHERE workshop_id = %s", (int(workshop_id),))
+    cur.execute("DELETE FROM workshops WHERE id = %s", (int(workshop_id),))
+
     conn.commit()
+    cur.close()
     conn.close()
 
     return redirect(url_for("admin_page"))
+
 
 @app.route("/admin/workshops/<int:workshop_id>/registrations")
 @admin_required
 def admin_view_registrations(workshop_id):
     conn = get_db()
-    workshop = conn.execute("SELECT * FROM workshops WHERE id=?", (workshop_id,)).fetchone()
-    registrations = conn.execute("""
-        SELECT * FROM registrations
-        WHERE workshop_id=?
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM workshops WHERE id = %s", (workshop_id,))
+    workshop = cur.fetchone()
+
+    cur.execute("""
+        SELECT *
+        FROM registrations
+        WHERE workshop_id = %s
         ORDER BY created_at DESC
-    """, (workshop_id,)).fetchall()
+    """, (workshop_id,))
+    registrations = cur.fetchall()
+
+    cur.close()
     conn.close()
 
-    return render_template("registrations.html", workshop=workshop, registrations=registrations)
+    return render_template(
+        "registrations.html",
+        workshop=workshop,
+        registrations=registrations
+    )
+
 
 # ---------------------------
-# Registration management (admin)
+# Registration management
 # ---------------------------
 @app.route("/admin/registrations/<int:reg_id>/toggle", methods=["POST"])
 @admin_required
 def admin_toggle_registration(reg_id):
     field = request.form.get("field", "")
+
     if field not in ("contacted", "canceled", "paid"):
         return redirect(request.referrer or url_for("admin_page"))
 
     conn = get_db()
-    row = conn.execute(
-        "SELECT workshop_id, contacted, canceled, paid FROM registrations WHERE id=?",
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT workshop_id, contacted, canceled, paid FROM registrations WHERE id = %s",
         (reg_id,)
-    ).fetchone()
+    )
+    row = cur.fetchone()
 
     if not row:
+        cur.close()
         conn.close()
         return redirect(url_for("admin_page"))
 
-    new_val = 0 if int(row[field] or 0) == 1 else 1
+    current_val = int(row[field] or 0)
+    new_val = 0 if current_val == 1 else 1
 
     if field == "paid" and new_val == 0:
-        conn.execute("UPDATE registrations SET paid=?, paid_amount=NULL WHERE id=?", (new_val, reg_id))
+        cur.execute(
+            "UPDATE registrations SET paid = %s, paid_amount = NULL WHERE id = %s",
+            (new_val, reg_id)
+        )
     else:
-        conn.execute(f"UPDATE registrations SET {field}=? WHERE id=?", (new_val, reg_id))
+        cur.execute(
+            f"UPDATE registrations SET {field} = %s WHERE id = %s",
+            (new_val, reg_id)
+        )
 
     conn.commit()
+
     workshop_id = int(row["workshop_id"])
+
+    cur.close()
     conn.close()
 
     return redirect(url_for("admin_view_registrations", workshop_id=workshop_id))
+
 
 @app.route("/admin/registrations/<int:reg_id>/set_paid_amount", methods=["POST"])
 @admin_required
@@ -397,17 +529,23 @@ def admin_set_paid_amount(reg_id):
     amount_raw = (request.form.get("paid_amount") or "").strip()
 
     conn = get_db()
-    row = conn.execute("SELECT workshop_id, paid FROM registrations WHERE id=?", (reg_id,)).fetchone()
+    cur = conn.cursor()
+
+    cur.execute("SELECT workshop_id, paid FROM registrations WHERE id = %s", (reg_id,))
+    row = cur.fetchone()
+
     if not row:
+        cur.close()
         conn.close()
         return redirect(url_for("admin_page"))
 
     workshop_id = int(row["workshop_id"])
+
     if int(row["paid"] or 0) != 1:
+        cur.close()
         conn.close()
         return redirect(url_for("admin_view_registrations", workshop_id=workshop_id))
 
-    amount_val = None
     try:
         amount_val = float(amount_raw)
         if amount_val < 0:
@@ -415,28 +553,54 @@ def admin_set_paid_amount(reg_id):
     except Exception:
         amount_val = None
 
-    conn.execute("UPDATE registrations SET paid_amount=? WHERE id=?", (amount_val, reg_id))
+    cur.execute(
+        "UPDATE registrations SET paid_amount = %s WHERE id = %s",
+        (amount_val, reg_id)
+    )
+
     conn.commit()
+    cur.close()
     conn.close()
+
     return redirect(url_for("admin_view_registrations", workshop_id=workshop_id))
+
 
 @app.route("/admin/registrations/<int:reg_id>/delete", methods=["POST"])
 @admin_required
 def admin_delete_registration(reg_id):
     conn = get_db()
-    row = conn.execute("SELECT workshop_id FROM registrations WHERE id=?", (reg_id,)).fetchone()
+    cur = conn.cursor()
+
+    cur.execute("SELECT workshop_id FROM registrations WHERE id = %s", (reg_id,))
+    row = cur.fetchone()
+
     if not row:
+        cur.close()
         conn.close()
         return redirect(url_for("admin_page"))
 
     workshop_id = int(row["workshop_id"])
-    conn.execute("DELETE FROM registrations WHERE id=?", (reg_id,))
+
+    cur.execute("DELETE FROM registrations WHERE id = %s", (reg_id,))
+
     conn.commit()
+    cur.close()
     conn.close()
+
     return redirect(url_for("admin_view_registrations", workshop_id=workshop_id))
 
+
 # ---------------------------
-# Run locally
+# Health check
 # ---------------------------
+@app.route("/health")
+def health():
+    return {
+        "status": "ok",
+        "database": "postgres",
+        "upload_folder": UPLOAD_FOLDER
+    }
+
+
 if __name__ == "__main__":
     app.run(debug=True)
