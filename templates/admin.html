@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Law7aty — Admin</title>
+  <title>لوحتي — الإدارة</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
@@ -12,43 +12,46 @@
 
     <div class="topbar">
       <div class="brand">
-        <div class="logo">👩🏻‍🎨</div>
+        <div class="logo">🎨</div>
         <div>
-          <h1>Admin — Manage Workshops</h1>
-          <p>Add • Update • Delete • View registrations</p>
+          <h1>إدارة لوحتي</h1>
+          <p>إضافة • تعديل • حذف • متابعة التسجيلات</p>
         </div>
       </div>
 
       <div class="actions">
-        <a class="btn" href="{{ url_for('customer_page') }}">Customer Page</a>
-        <a class="btn" href="{{ url_for('admin_logout') }}">Logout</a>
-        <a class="btn primary" href="#add">Add Workshop</a>
+        <a class="btn" href="{{ url_for('customer_page') }}">صفحة الزوار</a>
+        <a class="btn" href="{{ url_for('admin_logout') }}">تسجيل الخروج</a>
+        <a class="btn primary" href="#add">إضافة دورة</a>
       </div>
     </div>
 
-    <!-- ✅ Website Settings (WELCOME PHOTO) -->
+    <!-- Website Settings -->
     <div class="section">
-      <h2>Website Settings</h2>
-      <p class="muted" style="margin-top:-6px;">Change the welcome photo that appears on the customer page.</p>
+      <h2>إعدادات الموقع</h2>
+      <p class="muted" style="margin-top:-6px;">
+        هنا يمكنك تثبيت صورة الصفحة الرئيسية. حاليًا سيتم استخدام الصورة الموجودة في GitHub:
+        <b>/static/home.jpg</b>
+      </p>
 
       <div class="notice" style="margin-bottom:12px;">
-        Current welcome photo:
+        صورة الصفحة الرئيسية الحالية:
         {% if hero_image_url %}
-          <span class="pill">Uploaded ✅</span>
+          <span class="pill">موجودة ✅</span>
         {% else %}
-          <span class="pill">Not set</span>
+          <span class="pill">غير محددة</span>
         {% endif %}
       </div>
 
-      <form action="{{ url_for('admin_update_hero') }}" method="POST" enctype="multipart/form-data">
+      <form action="{{ url_for('admin_update_hero') }}" method="POST">
         <div class="form-row">
-          <div class="field">
-            <label>Upload welcome photo</label>
-            <input name="hero_image" type="file" accept="image/*" required>
+          <div class="field full">
+            <label>صورة الصفحة الرئيسية</label>
+            <p class="muted">عند الضغط على الزر سيتم استخدام: /static/home.jpg</p>
           </div>
 
           <div class="field full">
-            <button class="btn primary" type="submit">Save Welcome Photo 💾</button>
+            <button class="btn primary" type="submit">استخدام صورة الصفحة الرئيسية 💾</button>
           </div>
         </div>
       </form>
@@ -58,72 +61,72 @@
 
     <!-- Add workshop -->
     <div class="section" id="add">
-      <h2>Add new workshop / course</h2>
+      <h2>إضافة دورة جديدة</h2>
 
-      <form action="{{ url_for('admin_add_workshop') }}" method="POST" enctype="multipart/form-data">
+      <form action="{{ url_for('admin_add_workshop') }}" method="POST">
         <div class="form-row">
           <div class="field">
-            <label>Title</label>
-            <input name="title" required placeholder="e.g., Acrylic Painting — Sunset">
+            <label>عنوان الدورة</label>
+            <input name="title" required placeholder="مثال: دورة الأكريليك">
           </div>
 
           <div class="field">
-            <label>Location</label>
-            <input name="location" required placeholder="e.g., Haifa / Online / Technion">
+            <label>المكان</label>
+            <input name="location" required placeholder="مثال: حيفا / الناصرة / أونلاين">
           </div>
 
           <div class="field third">
-            <label>Date (optional)</label>
-            <input name="date" placeholder="e.g., 2026-02-10">
+            <label>التاريخ (اختياري)</label>
+            <input name="date" placeholder="مثال: 2026-02-10">
           </div>
 
           <div class="field third">
-            <label>Time (optional)</label>
-            <input name="time" placeholder="e.g., 18:00">
+            <label>الوقت (اختياري)</label>
+            <input name="time" placeholder="مثال: 18:00">
           </div>
 
           <div class="field third">
-            <label>Total seats</label>
-            <input name="seats_total" type="number" min="1" required placeholder="e.g., 15">
+            <label>عدد المقاعد</label>
+            <input name="seats_total" type="number" min="1" required placeholder="مثال: 15">
           </div>
 
           <div class="field third">
-            <label>Number of lessons (optional)</label>
-            <input name="lessons_count" type="number" min="1" placeholder="e.g., 6">
+            <label>عدد اللقاءات (اختياري)</label>
+            <input name="lessons_count" type="number" min="1" placeholder="مثال: 10">
           </div>
 
           <div class="field full">
-            <label>Description</label>
-            <textarea name="description" required placeholder="Write what they will learn, materials, vibes…"></textarea>
+            <label>وصف الدورة</label>
+            <textarea name="description" required placeholder="اكتب تفاصيل الدورة، ماذا تشمل، الأجواء، والمواد..."></textarea>
           </div>
 
           <div class="field">
-            <label>Recommended age range (optional)</label>
-            <input name="age_range" placeholder="e.g., 12+ / 18+ / Kids 7-10">
+            <label>العمر المناسب (اختياري)</label>
+            <input name="age_range" placeholder="مثال: 12+ / 18+ / أطفال 7-10">
           </div>
 
           <div class="field">
-            <label>Workshop photo (upload, optional)</label>
-            <input name="image" type="file" accept="image/*">
+            <label>صورة الدورة</label>
+            <p class="muted">سيتم استخدام صورة الأكريليك تلقائيًا: /static/acrylic1.jpg</p>
           </div>
 
           <div class="field full">
-            <button class="btn primary" type="submit">Post ➕</button>
+            <button class="btn primary" type="submit">نشر الدورة ➕</button>
           </div>
         </div>
       </form>
 
-      <p class="muted">No price is shown (as requested).</p>
+      <p class="muted">السعر غير ظاهر للزوار.</p>
     </div>
 
     <hr class="hr"/>
 
     <!-- Existing workshops -->
     <div class="section">
-      <h2>Posted workshops</h2>
+      <h2>الدورات المنشورة</h2>
 
       {% if workshops|length == 0 %}
-        <div class="notice">No workshops yet. Add your first one above ✨</div>
+        <div class="notice">لا توجد دورات بعد. أضف أول دورة ✨</div>
       {% endif %}
 
       <div class="grid">
@@ -131,11 +134,11 @@
         <div class="card">
           <div class="cover">
             {% if w.image_url %}
-              <img src="{{ w.image_url }}" alt="workshop image">
+              <img src="{{ w.image_url }}" alt="صورة الدورة">
             {% else %}
-              <img src="https://via.placeholder.com/1000x600.png?text=Law7aty+Workshop" alt="placeholder">
+              <img src="/static/acrylic1.jpg" alt="صورة الدورة">
             {% endif %}
-            <div class="badge">Registered: {{ w.reg_count }} / {{ w.seats_total }}</div>
+            <div class="badge">المسجلون: {{ w.reg_count }} / {{ w.seats_total }}</div>
           </div>
 
           <div class="card-body">
@@ -145,21 +148,21 @@
               {% if w.date %}<span class="pill">📅 {{ w.date }}</span>{% endif %}
               {% if w.time %}<span class="pill">⏰ {{ w.time }}</span>{% endif %}
               {% if w.location %}<span class="pill">📍 {{ w.location }}</span>{% endif %}
-              {% if w.lessons_count %}<span class="pill">📚 {{ w.lessons_count }} lessons</span>{% endif %}
+              {% if w.lessons_count %}<span class="pill">📚 {{ w.lessons_count }} لقاء</span>{% endif %}
             </div>
 
             <p class="desc">{{ w.description }}</p>
 
             {% if w.age_range %}
-              <div class="muted">Recommended age: {{ w.age_range }}</div>
+              <div class="muted">العمر المناسب: {{ w.age_range }}</div>
             {% endif %}
 
-            <div class="muted">Workshop ID: {{ w.id }}</div>
+            <div class="muted">رقم الدورة: {{ w.id }}</div>
           </div>
 
           <div class="card-footer">
             <a class="btn small" href="{{ url_for('admin_view_registrations', workshop_id=w.id) }}">
-              View registrations
+              عرض التسجيلات
             </a>
 
             <div style="display:flex; gap:8px;">
@@ -175,12 +178,12 @@
                   '{{ w.age_range|default('', true)|e }}',
                   '{{ w.description|e }}'
                 )">
-                Edit
+                تعديل
               </button>
 
               <form action="{{ url_for('admin_delete_workshop') }}" method="POST" style="margin:0;">
                 <input type="hidden" name="workshop_id" value="{{ w.id }}">
-                <button class="btn danger small" type="submit">Delete</button>
+                <button class="btn danger small" type="submit">حذف</button>
               </form>
             </div>
           </div>
@@ -191,60 +194,60 @@
 
     <!-- Edit workshop panel -->
     <div class="section" id="editBox" style="display:none;">
-      <h2>Edit workshop</h2>
+      <h2>تعديل الدورة</h2>
 
-      <form action="{{ url_for('admin_update_workshop') }}" method="POST" enctype="multipart/form-data">
+      <form action="{{ url_for('admin_update_workshop') }}" method="POST">
         <input type="hidden" name="workshop_id" id="edit_id">
 
         <div class="form-row">
           <div class="field">
-            <label>Title</label>
+            <label>عنوان الدورة</label>
             <input name="title" id="edit_title" required>
           </div>
 
           <div class="field">
-            <label>Location</label>
+            <label>المكان</label>
             <input name="location" id="edit_location" required>
           </div>
 
           <div class="field third">
-            <label>Date (optional)</label>
-            <input name="date" id="edit_date" placeholder="e.g., 2026-02-10">
+            <label>التاريخ (اختياري)</label>
+            <input name="date" id="edit_date" placeholder="مثال: 2026-02-10">
           </div>
 
           <div class="field third">
-            <label>Time (optional)</label>
-            <input name="time" id="edit_time" placeholder="e.g., 18:00">
+            <label>الوقت (اختياري)</label>
+            <input name="time" id="edit_time" placeholder="مثال: 18:00">
           </div>
 
           <div class="field third">
-            <label>Total seats</label>
+            <label>عدد المقاعد</label>
             <input name="seats_total" id="edit_seats" type="number" min="1" required>
           </div>
 
           <div class="field third">
-            <label>Number of lessons (optional)</label>
-            <input name="lessons_count" id="edit_lessons" type="number" min="1" placeholder="e.g., 6">
+            <label>عدد اللقاءات (اختياري)</label>
+            <input name="lessons_count" id="edit_lessons" type="number" min="1" placeholder="مثال: 10">
           </div>
 
           <div class="field">
-            <label>Recommended age range (optional)</label>
+            <label>العمر المناسب (اختياري)</label>
             <input name="age_range" id="edit_age_range">
           </div>
 
           <div class="field">
-            <label>Replace photo (optional)</label>
-            <input name="image" type="file" accept="image/*">
+            <label>صورة الدورة</label>
+            <p class="muted">عند الحفظ سيتم استخدام: /static/acrylic1.jpg</p>
           </div>
 
           <div class="field full">
-            <label>Description</label>
+            <label>وصف الدورة</label>
             <textarea name="description" id="edit_desc" required></textarea>
           </div>
 
           <div class="field full">
-            <button class="btn primary" type="submit">Save changes 💾</button>
-            <button class="btn" type="button" onclick="closeEdit()">Cancel</button>
+            <button class="btn primary" type="submit">حفظ التعديلات 💾</button>
+            <button class="btn" type="button" onclick="closeEdit()">إلغاء</button>
           </div>
         </div>
       </form>
@@ -268,6 +271,7 @@
       box.style.display = "block";
       box.scrollIntoView({behavior:"smooth"});
     }
+
     function closeEdit(){
       document.getElementById('editBox').style.display = "none";
     }
