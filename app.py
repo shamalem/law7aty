@@ -15,7 +15,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 HOME_IMAGE_URL = "/static/home.jpg"
-ACRYLIC_IMAGE_URL = "/static/acrylic1.jpg"
+ACRYLIC_IMAGE_URL = "/static/acrylic1.png"
 
 INSTAGRAM_URL = os.environ.get(
     "INSTAGRAM_URL",
