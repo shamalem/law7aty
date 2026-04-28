@@ -15,78 +15,73 @@
         <div class="logo">🎨</div>
         <div>
           <h1>إدارة لوحتي</h1>
-          <p>إضافة • تعديل • حذف • متابعة التسجيلات</p>
+          <p>إضافة • تعديل • معرض الإبداعات • متابعة التسجيلات</p>
         </div>
       </div>
 
       <div class="actions">
         <a class="btn" href="{{ url_for('customer_page') }}">صفحة الزوار</a>
+        <a class="btn" href="{{ url_for('student_creations') }}">معرض الطلاب</a>
         <a class="btn" href="{{ url_for('admin_logout') }}">تسجيل الخروج</a>
-        <a class="btn primary" href="#add">إضافة دورة</a>
       </div>
     </div>
 
-    <div class="section">
-      <h2>إعدادات الموقع</h2>
-      <p class="muted">سيتم استخدام صورة الصفحة الرئيسية من GitHub: <b>/static/home.jpg</b></p>
-
-      <form action="{{ url_for('admin_update_hero') }}" method="POST">
-        <button class="btn primary" type="submit">استخدام صورة الصفحة الرئيسية 💾</button>
+    <div class="section" id="admin-gallery" style="background-color: #fff9fa; border: 1px solid #ffe4e9;">
+      <h2>إضافة لوحة جديدة لمعرض الطلاب 🎨</h2>
+      <p class="muted">هذه الصور ستظهر في صفحة "إبداعات الطلاب" للزوار.</p>
+      
+      <form action="{{ url_for('admin_add_gallery') }}" method="POST" enctype="multipart/form-data">
+        <div class="form-row">
+          <div class="field">
+            <label>اسم الطالب (اختياري)</label>
+            <input name="student_name" placeholder="مثال: شام">
+          </div>
+          <div class="field">
+            <label>صورة اللوحة</label>
+            <input type="file" name="img" accept="image/*" required>
+          </div>
+          <div class="field full">
+            <button class="btn primary" type="submit">نشر في المعرض ✨</button>
+          </div>
+        </div>
       </form>
+
+      {% if gallery_items %}
+      <div style="margin-top: 20px;">
+        <h4>اللوحات المرفوعة حديثاً:</h4>
+        <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;">
+          {% for item in gallery_items[:5] %}
+            <div style="flex: 0 0 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 2px solid #fff;">
+              <img src="{{ item.image_url }}" alt="Art" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
     </div>
 
     <hr class="hr"/>
 
     <div class="section" id="add">
       <h2>إضافة دورة جديدة</h2>
-
       <form action="{{ url_for('admin_add_workshop') }}" method="POST">
         <div class="form-row">
           <div class="field">
             <label>عنوان الدورة</label>
             <input name="title" required placeholder="مثال: دورة الأكريليك">
           </div>
-
           <div class="field">
             <label>المكان</label>
-            <input name="location" required placeholder="مثال: حيفا / الناصرة / أونلاين">
+            <input name="location" required placeholder="مثال: حيفا">
           </div>
-
-          <div class="field third">
-            <label>التاريخ (اختياري)</label>
-            <input name="date" placeholder="مثال: 2026-02-10">
-          </div>
-
-          <div class="field third">
-            <label>الوقت (اختياري)</label>
-            <input name="time" placeholder="مثال: 18:00">
-          </div>
-
           <div class="field third">
             <label>عدد المقاعد</label>
-            <input name="seats_total" type="number" min="1" required placeholder="مثال: 15">
+            <input name="seats_total" type="number" min="1" required>
           </div>
-
-          <div class="field third">
-            <label>عدد اللقاءات (اختياري)</label>
-            <input name="lessons_count" type="number" min="1" placeholder="مثال: 10">
-          </div>
-
           <div class="field full">
             <label>وصف الدورة</label>
-            <textarea name="description" required placeholder="اكتب تفاصيل الدورة..."></textarea>
+            <textarea name="description" required placeholder="تفاصيل الدورة..."></textarea>
           </div>
-
-          <div class="field">
-            <label>العمر المناسب (اختياري)</label>
-            <input name="age_range" placeholder="مثال: 12+ / 18+">
-          </div>
-
-          <div class="field">
-            <label>صورة الدورة</label>
-            <p class="muted">سيتم استخدام: <b>/static/acrylic1.jpg</b></p>
-          </div>
-
           <div class="field full">
             <button class="btn primary" type="submit">نشر الدورة ➕</button>
           </div>
@@ -98,7 +93,6 @@
 
     <div class="section">
       <h2>الدورات المنشورة</h2>
-
       {% if workshops|length == 0 %}
         <div class="notice">لا توجد دورات بعد ✨</div>
       {% endif %}
@@ -107,143 +101,31 @@
         {% for w in workshops %}
         <div class="card">
           <div class="cover">
-            {% if w.image_url %}
-              <img src="{{ w.image_url }}" alt="صورة الدورة">
-            {% else %}
-              <img src="/static/acrylic1.jpg" alt="صورة الدورة">
-            {% endif %}
+            <img src="{{ w.image_url or '/static/acrylic1.png' }}" alt="Workshop">
             <div class="badge">المسجلون: {{ w.reg_count }} / {{ w.seats_total }}</div>
           </div>
-
           <div class="card-body">
             <h3 class="title">{{ w.title }}</h3>
-
-            <div class="meta">
-              {% if w.date %}<span class="pill">📅 {{ w.date }}</span>{% endif %}
-              {% if w.time %}<span class="pill">⏰ {{ w.time }}</span>{% endif %}
-              {% if w.location %}<span class="pill">📍 {{ w.location }}</span>{% endif %}
-              {% if w.lessons_count %}<span class="pill">📚 {{ w.lessons_count }} لقاء</span>{% endif %}
-            </div>
-
             <p class="desc">{{ w.description }}</p>
-
-            {% if w.age_range %}
-              <div class="muted">العمر المناسب: {{ w.age_range }}</div>
-            {% endif %}
-
-            <div class="muted">رقم الدورة: {{ w.id }}</div>
           </div>
-
           <div class="card-footer">
             <a class="btn small" href="{{ url_for('admin_view_registrations', workshop_id=w.id) }}">
-              عرض التسجيلات
+              التسجيلات
             </a>
-
-            <div style="display:flex; gap:8px;">
-              <button class="btn small edit-btn" type="button"
-                data-id="{{ w.id }}"
-                data-title="{{ w.title|e }}"
-                data-location="{{ w.location|e }}"
-                data-date="{{ w.date|default('', true)|e }}"
-                data-time="{{ w.time|default('', true)|e }}"
-                data-seats="{{ w.seats_total }}"
-                data-lessons="{{ w.lessons_count|default('', true) }}"
-                data-age="{{ w.age_range|default('', true)|e }}"
-                data-desc="{{ w.description|e }}">
-                تعديل
-              </button>
-
-              <form action="{{ url_for('admin_delete_workshop') }}" method="POST" style="margin:0;">
-                <input type="hidden" name="workshop_id" value="{{ w.id }}">
-                <button class="btn danger small" type="submit">حذف</button>
-              </form>
-            </div>
+            <form action="{{ url_for('admin_delete_workshop') }}" method="POST" style="margin:0;">
+              <input type="hidden" name="workshop_id" value="{{ w.id }}">
+              <button class="btn danger small" type="submit">حذف</button>
+            </form>
           </div>
         </div>
         {% endfor %}
       </div>
     </div>
 
-    <div class="section" id="editBox" style="display:none;">
-      <h2>تعديل الدورة</h2>
-
-      <form action="{{ url_for('admin_update_workshop') }}" method="POST">
-        <input type="hidden" name="workshop_id" id="edit_id">
-
-        <div class="form-row">
-          <div class="field">
-            <label>عنوان الدورة</label>
-            <input name="title" id="edit_title" required>
-          </div>
-
-          <div class="field">
-            <label>المكان</label>
-            <input name="location" id="edit_location" required>
-          </div>
-
-          <div class="field third">
-            <label>التاريخ (اختياري)</label>
-            <input name="date" id="edit_date">
-          </div>
-
-          <div class="field third">
-            <label>الوقت (اختياري)</label>
-            <input name="time" id="edit_time">
-          </div>
-
-          <div class="field third">
-            <label>عدد المقاعد</label>
-            <input name="seats_total" id="edit_seats" type="number" min="1" required>
-          </div>
-
-          <div class="field third">
-            <label>عدد اللقاءات (اختياري)</label>
-            <input name="lessons_count" id="edit_lessons" type="number" min="1">
-          </div>
-
-          <div class="field">
-            <label>العمر المناسب (اختياري)</label>
-            <input name="age_range" id="edit_age_range">
-          </div>
-
-          <div class="field full">
-            <label>وصف الدورة</label>
-            <textarea name="description" id="edit_desc" required></textarea>
-          </div>
-
-          <div class="field full">
-            <button class="btn primary" type="submit">حفظ التعديلات 💾</button>
-            <button class="btn" type="button" onclick="closeEdit()">إلغاء</button>
-          </div>
-        </div>
-      </form>
+    <div class="footer-mini" style="margin-top: 50px; text-align: center; color: #aaa;">
+      © لوحتي — لوحة تحكم الإدارة 🔐
     </div>
-
   </div>
-
-  <script>
-    document.querySelectorAll(".edit-btn").forEach(function(btn) {
-      btn.addEventListener("click", function() {
-        document.getElementById("edit_id").value = btn.dataset.id;
-        document.getElementById("edit_title").value = btn.dataset.title;
-        document.getElementById("edit_location").value = btn.dataset.location;
-        document.getElementById("edit_date").value = btn.dataset.date || "";
-        document.getElementById("edit_time").value = btn.dataset.time || "";
-        document.getElementById("edit_seats").value = btn.dataset.seats;
-        document.getElementById("edit_lessons").value = btn.dataset.lessons || "";
-        document.getElementById("edit_age_range").value = btn.dataset.age || "";
-        document.getElementById("edit_desc").value = btn.dataset.desc;
-
-        const box = document.getElementById("editBox");
-        box.style.display = "block";
-        box.scrollIntoView({ behavior: "smooth" });
-      });
-    });
-
-    function closeEdit() {
-      document.getElementById("editBox").style.display = "none";
-    }
-  </script>
 
 </body>
 </html>
