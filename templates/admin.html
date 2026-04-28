@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>لوحتي — الإدارة</title>
+  <title>لوحتي — لوحة التحكم</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
@@ -14,23 +14,20 @@
       <div class="brand">
         <div class="logo">🎨</div>
         <div>
-          <h1>إدارة لوحتي</h1>
-          <p>إضافة • تعديل • معرض الإبداعات • متابعة التسجيلات</p>
+          <h1>لوحة تحكم لوحتي</h1>
+          <p>أهلاً بكِ مجدداً في مساحتكِ الإدارية</p>
         </div>
       </div>
-
       <div class="actions">
-        <a class="btn" href="{{ url_for('customer_page') }}">صفحة الزوار</a>
-        <a class="btn" href="{{ url_for('student_creations') }}">معرض الطلاب</a>
+        <a class="btn" href="{{ url_for('customer_page') }}">معاينة الموقع</a>
         <a class="btn" href="{{ url_for('admin_logout') }}">تسجيل الخروج</a>
       </div>
     </div>
 
-    <div class="section" id="admin-gallery" style="background-color: #fff9fa; border: 1px solid #ffe4e9;">
-      <h2>إضافة لوحة جديدة لمعرض الطلاب 🎨</h2>
-      <p class="muted">هذه الصور ستظهر في صفحة "إبداعات الطلاب" للزوار.</p>
+    <div class="section" style="background-color: #fff9fa; border: 1px solid #ffe4e9;">
+      <h2>إدارة معرض إبداعات الطلاب 🖼️</h2>
       
-      <form action="{{ url_for('admin_add_gallery') }}" method="POST" enctype="multipart/form-data">
+      <form action="{{ url_for('admin_add_gallery') }}" method="POST" enctype="multipart/form-data" style="margin-bottom: 30px;">
         <div class="form-row">
           <div class="field">
             <label>اسم الطالب (اختياري)</label>
@@ -46,33 +43,44 @@
         </div>
       </form>
 
-      {% if gallery_items %}
-      <div style="margin-top: 20px;">
-        <h4>اللوحات المرفوعة حديثاً:</h4>
-        <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;">
-          {% for item in gallery_items[:5] %}
-            <div style="flex: 0 0 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 2px solid #fff;">
-              <img src="{{ item.image_url }}" alt="Art" style="width: 100%; height: 100%; object-fit: cover;">
+      <hr class="hr" style="opacity: 0.3;"/>
+
+      <h3>اللوحات المنشورة حالياً</h3>
+      {% if gallery_items|length == 0 %}
+        <p class="muted">لا توجد لوحات في المعرض حالياً.</p>
+      {% else %}
+        <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px;">
+          {% for item in gallery_items %}
+          <div class="card" style="padding: 8px; border-radius: 12px;">
+            <div class="cover" style="height: 120px; border-radius: 8px;">
+              <img src="{{ item.image_url }}" alt="Art" style="height: 100%; object-fit: cover;">
             </div>
+            <div style="padding: 8px 0; text-align: center;">
+              <p class="muted" style="font-size: 0.8rem; margin-bottom: 8px;">{{ item.student_name or 'بدون اسم' }}</p>
+              <form action="{{ url_for('admin_delete_gallery') }}" method="POST" onsubmit="return confirm('هل أنتِ متأكدة من حذف هذه اللوحة؟');">
+                <input type="hidden" name="post_id" value="{{ item.id }}">
+                <button class="btn danger small" type="submit" style="width: 100%; font-size: 0.75rem;">حذف 🗑️</button>
+              </form>
+            </div>
+          </div>
           {% endfor %}
         </div>
-      </div>
       {% endif %}
     </div>
 
     <hr class="hr"/>
 
-    <div class="section" id="add">
-      <h2>إضافة دورة جديدة</h2>
+    <div class="section" id="add-workshop">
+      <h2>إضافة دورة جديدة ➕</h2>
       <form action="{{ url_for('admin_add_workshop') }}" method="POST">
         <div class="form-row">
           <div class="field">
             <label>عنوان الدورة</label>
-            <input name="title" required placeholder="مثال: دورة الأكريليك">
+            <input name="title" required placeholder="مثال: ورشة الأكريليك للمبتدئين">
           </div>
           <div class="field">
             <label>المكان</label>
-            <input name="location" required placeholder="مثال: حيفا">
+            <input name="location" required placeholder="مثال: استوديو حيفا">
           </div>
           <div class="field third">
             <label>عدد المقاعد</label>
@@ -80,10 +88,10 @@
           </div>
           <div class="field full">
             <label>وصف الدورة</label>
-            <textarea name="description" required placeholder="تفاصيل الدورة..."></textarea>
+            <textarea name="description" required placeholder="ماذا سنتعلم في هذه الورشة؟"></textarea>
           </div>
           <div class="field full">
-            <button class="btn primary" type="submit">نشر الدورة ➕</button>
+            <button class="btn primary" type="submit">نشر الدورة الجديدة 🚀</button>
           </div>
         </div>
       </form>
@@ -92,11 +100,7 @@
     <hr class="hr"/>
 
     <div class="section">
-      <h2>الدورات المنشورة</h2>
-      {% if workshops|length == 0 %}
-        <div class="notice">لا توجد دورات بعد ✨</div>
-      {% endif %}
-
+      <h2>إدارة الدورات الحالية</h2>
       <div class="grid">
         {% for w in workshops %}
         <div class="card">
@@ -106,13 +110,13 @@
           </div>
           <div class="card-body">
             <h3 class="title">{{ w.title }}</h3>
-            <p class="desc">{{ w.description }}</p>
+            <p class="muted">📍 {{ w.location }}</p>
           </div>
           <div class="card-footer">
             <a class="btn small" href="{{ url_for('admin_view_registrations', workshop_id=w.id) }}">
-              التسجيلات
+              التسجيلات ({{ w.reg_count }})
             </a>
-            <form action="{{ url_for('admin_delete_workshop') }}" method="POST" style="margin:0;">
+            <form action="{{ url_for('admin_delete_workshop') }}" method="POST" onsubmit="return confirm('حذف الدورة سيحذف جميع تسجيلات الطلاب فيها! هل أنتِ متأكدة؟');">
               <input type="hidden" name="workshop_id" value="{{ w.id }}">
               <button class="btn danger small" type="submit">حذف</button>
             </form>
@@ -122,9 +126,10 @@
       </div>
     </div>
 
-    <div class="footer-mini" style="margin-top: 50px; text-align: center; color: #aaa;">
-      © لوحتي — لوحة تحكم الإدارة 🔐
+    <div class="footer-mini" style="margin-top: 60px; text-align: center; color: #aaa; padding-bottom: 30px;">
+      <p>© لوحتي — صنع بحب لإدارة إبداعاتك 🌸</p>
     </div>
+
   </div>
 
 </body>
