@@ -14,7 +14,7 @@
         <div class="logo">🎨</div>
         <div>
           <h1>لوحتي 🎀</h1>
-           <p>ورشات فنية متنوعة 🎨 </p>
+          <p>ورشات فنية متنوعة 🎨 </p>
         </div>
       </div>
 
@@ -134,4 +134,53 @@
       <form action="{{ url_for('register') }}" method="POST">
         <input type="hidden" name="workshop_id" id="workshop_id">
 
-        <div class="form-row
+        <div class="form-row">
+          <div class="field">
+            <label>الاسم الكامل</label>
+            <input name="name" required placeholder="اسمك الثلاثي">
+          </div>
+
+          <div class="field">
+            <label>رقم الهاتف</label>
+            <input name="phone" required placeholder="05x-xxxxxxx">
+          </div>
+
+          <div class="field third">
+            <label>العمر</label>
+            <input name="age" type="number" min="4" max="100" required>
+          </div>
+
+          <div class="field full">
+            <button class="btn primary" type="submit">تأكيد الحجز ✅</button>
+            <button class="btn" type="button" onclick="closeRegister()">إلغاء</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="footer-mini" style="margin-top: 80px; text-align: center; padding: 40px; border-top: 1px solid #eee;">
+      <div class="muted" style="position: relative;">
+        © لوحتي — صنع بحب  🌸
+        
+        <a href="{{ url_for('admin_login') }}" 
+           style="text-decoration: none; color: inherit; opacity: 0.02; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);">login</a>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function openRegister(id, title){
+      document.getElementById('workshop_id').value = id;
+      document.getElementById('regTitle').textContent = "التسجيل في — " + title;
+      document.getElementById('registerBox').style.display = "block";
+      document.getElementById('registerBox').scrollIntoView({behavior:"smooth"});
+    }
+
+    function closeRegister(){
+      document.getElementById('registerBox').style.display = "none";
+    }
+  </script>
+
+</body>
+</html>
