@@ -13,17 +13,17 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# --- إعدادات البيئة ---
+# --- إعدادات البيئة (Environment Variables) ---
 app.secret_key = os.environ.get("SECRET_KEY", "law7aty-secure-key-2026")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# إعدادات سوبابيس
+# إعدادات سوبابيس لتخزين الصور
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
-# أصول ثابتة
+# أصول ثابتة (Assets)
 HOME_IMAGE_URL = "/static/home.jpg"
 ACRYLIC_IMAGE_URL = "/static/acrylic1.png"
 INSTAGRAM_URL = os.environ.get(
@@ -31,10 +31,10 @@ INSTAGRAM_URL = os.environ.get(
     "https://www.instagram.com/law7atiii"
 )
 
-# --- مساعدات قاعدة البيانات ---
+# --- مساعدات قاعدة البيانات (Database Helpers) ---
 def get_db():
     if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL is missing.")
+        raise RuntimeError("DATABASE_URL is missing. Add it in Render Environment Variables.")
     return psycopg2.connect(
         DATABASE_URL,
         cursor_factory=psycopg2.extras.RealDictCursor
@@ -43,6 +43,7 @@ def get_db():
 def init_db():
     conn = get_db()
     cur = conn.cursor()
+
     # جدول الورشات
     cur.execute("""
     CREATE TABLE IF NOT EXISTS workshops (
@@ -54,14 +55,7 @@ def init_db():
         image_url TEXT
     )
     """)
-    # جدول معرض الصور (تأكدنا أن الاسم هو gallery والعمود student)
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS gallery (
-        id SERIAL PRIMARY KEY,
-        image_url TEXT,
-        student TEXT
-    )
-    """)
+
     # جدول التسجيلات
     cur.execute("""
     CREATE TABLE IF NOT EXISTS registrations (
@@ -74,13 +68,24 @@ def init_db():
         created_at TEXT
     )
     """)
+
+    # جدول معرض إبداعات الطلاب
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS student_gallery (
+        id SERIAL PRIMARY KEY,
+        image_url TEXT,
+        student_name TEXT
+    )
+    """)
+
     conn.commit()
     cur.close()
     conn.close()
 
+# تشغيل تهيئة قاعدة البيانات عند بدء التطبيق
 init_db()
 
-# --- حماية المسؤول ---
+# --- مزخرف الحماية (Auth Decorator) ---
 def admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -89,24 +94,39 @@ def admin_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
-# --- مسارات الزوار ---
+# --- مسارات الزوار (CUSTOMER ROUTES) ---
 
 @app.route("/")
 def customer_page():
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT w.*, (SELECT COUNT(*) FROM registrations r WHERE r.workshop_id = w.id) AS reg_count FROM workshops w ORDER BY id DESC")
+    # جلب الورشات مع عدد المسجلين (reg_count) لكل واحدة
+    cur.execute("""
+        SELECT w.*, 
+        (SELECT COUNT(*) FROM registrations r WHERE r.workshop_id = w.id) AS reg_count
+        FROM workshops w 
+        ORDER BY id DESC
+    """)
     workshops = cur.fetchall()
     cur.close()
     conn.close()
-    return render_template("index.html", workshops=workshops, instagram_url=INSTAGRAM_URL)
+
+    # حساب المقاعد المتبقية (seats_left) لمنع خطأ Jinja2
+    enriched_workshops = []
+    for w in workshops:
+        item = dict(w)
+        seats_total = int(w.get('seats_total') or 0)
+        reg_count = int(w.get('reg_count') or 0)
+        item['seats_left'] = max(0, seats_total - reg_count)
+        enriched_workshops.append(item)
+
+    return render_template("index.html", workshops=enriched_workshops, instagram_url=INSTAGRAM_URL)
 
 @app.route("/gallery")
 def student_creations():
     conn = get_db()
     cur = conn.cursor()
-    # التعديل هنا ليتناسب مع اسم الجدول gallery
-    cur.execute("SELECT * FROM gallery ORDER BY id DESC")
+    cur.execute("SELECT * FROM student_gallery ORDER BY id DESC")
     images = cur.fetchall()
     cur.close()
     conn.close()
@@ -118,18 +138,22 @@ def register():
     name = request.form.get("name", "").strip()
     phone = request.form.get("phone", "").strip()
     age = request.form.get("age", "").strip()
+
     if not (workshop_id and name and phone and age):
         return redirect(url_for("customer_page"))
+
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("INSERT INTO registrations (workshop_id, name, phone, age, created_at) VALUES (%s, %s, %s, %s, %s)",
-                (int(workshop_id), name, phone, int(age), datetime.now().strftime("%Y-%m-%d %H:%M")))
+    cur.execute("""
+        INSERT INTO registrations (workshop_id, name, phone, age, created_at)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (int(workshop_id), name, phone, int(age), datetime.now().strftime("%Y-%m-%d %H:%M")))
     conn.commit()
     cur.close()
     conn.close()
     return redirect(url_for("customer_page"))
 
-# --- مسارات الإدارة ---
+# --- مسارات الإدارة (ADMIN ROUTES) ---
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
@@ -146,10 +170,15 @@ def admin_login():
 def admin_page():
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT w.*, (SELECT COUNT(*) FROM registrations r WHERE r.workshop_id = w.id) AS reg_count FROM workshops w ORDER BY id DESC")
+    # جلب الورشات مع عدد المسجلين
+    cur.execute("""
+        SELECT w.*, 
+        (SELECT COUNT(*) FROM registrations r WHERE r.workshop_id = w.id) AS reg_count 
+        FROM workshops w ORDER BY id DESC
+    """)
     workshops = cur.fetchall()
-    # التعديل هنا ليتناسب مع اسم الجدول gallery
-    cur.execute("SELECT * FROM gallery ORDER BY id DESC")
+    # جلب صور المعرض
+    cur.execute("SELECT * FROM student_gallery ORDER BY id DESC")
     gallery_items = cur.fetchall()
     cur.close()
     conn.close()
@@ -160,17 +189,20 @@ def admin_page():
 def admin_add_gallery():
     name = request.form.get("student_name", "").strip()
     file = request.files.get("img")
+
     if file and supabase_client:
         filename = f"gallery/{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
         supabase_client.storage.from_('law7aty-gallery').upload(filename, file.read())
         image_url = supabase_client.storage.from_('law7aty-gallery').get_public_url(filename)
+
         conn = get_db()
         cur = conn.cursor()
-        # التعديل هنا: اسم الجدول gallery والعمود student
-        cur.execute("INSERT INTO gallery (image_url, student) VALUES (%s, %s)", (image_url, name))
+        cur.execute("INSERT INTO student_gallery (image_url, student_name) VALUES (%s, %s)", 
+                    (image_url, name))
         conn.commit()
         cur.close()
         conn.close()
+
     return redirect(url_for("admin_page"))
 
 @app.route("/admin/gallery/delete", methods=["POST"])
@@ -180,7 +212,7 @@ def admin_delete_gallery():
     if post_id:
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("DELETE FROM gallery WHERE id = %s", (int(post_id),))
+        cur.execute("DELETE FROM student_gallery WHERE id = %s", (int(post_id),))
         conn.commit()
         cur.close()
         conn.close()
@@ -194,19 +226,50 @@ def admin_add_workshop():
     location = request.form.get("location", "").strip()
     seats_total = request.form.get("seats_total", "0")
     file = request.files.get("workshop_img")
+    
     image_url = ACRYLIC_IMAGE_URL
     if file and supabase_client:
         filename = f"workshops/{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
         supabase_client.storage.from_('law7aty-gallery').upload(filename, file.read())
         image_url = supabase_client.storage.from_('law7aty-gallery').get_public_url(filename)
+
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("INSERT INTO workshops (title, description, location, seats_total, image_url) VALUES (%s, %s, %s, %s, %s)",
-                (title, description, location, int(seats_total), image_url))
+    cur.execute("""
+        INSERT INTO workshops (title, description, location, seats_total, image_url)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (title, description, location, int(seats_total), image_url))
     conn.commit()
     cur.close()
     conn.close()
     return redirect(url_for("admin_page"))
+
+@app.route("/admin/workshops/delete", methods=["POST"])
+@admin_required
+def admin_delete_workshop():
+    workshop_id = request.form.get("workshop_id")
+    if workshop_id:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM registrations WHERE workshop_id = %s", (int(workshop_id),))
+        cur.execute("DELETE FROM workshops WHERE id = %s", (int(workshop_id),))
+        conn.commit()
+        cur.close()
+        conn.close()
+    return redirect(url_for("admin_page"))
+
+@app.route("/admin/registrations/<int:workshop_id>")
+@admin_required
+def admin_view_registrations(workshop_id):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM workshops WHERE id = %s", (workshop_id,))
+    workshop = cur.fetchone()
+    cur.execute("SELECT * FROM registrations WHERE workshop_id = %s ORDER BY id DESC", (workshop_id,))
+    regs = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("registrations.html", workshop=workshop, registrations=regs)
 
 @app.route("/admin/logout")
 def admin_logout():
