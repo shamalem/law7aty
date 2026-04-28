@@ -26,40 +26,17 @@
       </div>
     </div>
 
-    <!-- Website Settings -->
     <div class="section">
       <h2>إعدادات الموقع</h2>
-      <p class="muted" style="margin-top:-6px;">
-        هنا يمكنك تثبيت صورة الصفحة الرئيسية. حاليًا سيتم استخدام الصورة الموجودة في GitHub:
-        <b>/static/home.jpg</b>
-      </p>
-
-      <div class="notice" style="margin-bottom:12px;">
-        صورة الصفحة الرئيسية الحالية:
-        {% if hero_image_url %}
-          <span class="pill">موجودة ✅</span>
-        {% else %}
-          <span class="pill">غير محددة</span>
-        {% endif %}
-      </div>
+      <p class="muted">سيتم استخدام صورة الصفحة الرئيسية من GitHub: <b>/static/home.jpg</b></p>
 
       <form action="{{ url_for('admin_update_hero') }}" method="POST">
-        <div class="form-row">
-          <div class="field full">
-            <label>صورة الصفحة الرئيسية</label>
-            <p class="muted">عند الضغط على الزر سيتم استخدام: /static/home.jpg</p>
-          </div>
-
-          <div class="field full">
-            <button class="btn primary" type="submit">استخدام صورة الصفحة الرئيسية 💾</button>
-          </div>
-        </div>
+        <button class="btn primary" type="submit">استخدام صورة الصفحة الرئيسية 💾</button>
       </form>
     </div>
 
     <hr class="hr"/>
 
-    <!-- Add workshop -->
     <div class="section" id="add">
       <h2>إضافة دورة جديدة</h2>
 
@@ -97,17 +74,17 @@
 
           <div class="field full">
             <label>وصف الدورة</label>
-            <textarea name="description" required placeholder="اكتب تفاصيل الدورة، ماذا تشمل، الأجواء، والمواد..."></textarea>
+            <textarea name="description" required placeholder="اكتب تفاصيل الدورة..."></textarea>
           </div>
 
           <div class="field">
             <label>العمر المناسب (اختياري)</label>
-            <input name="age_range" placeholder="مثال: 12+ / 18+ / أطفال 7-10">
+            <input name="age_range" placeholder="مثال: 12+ / 18+">
           </div>
 
           <div class="field">
             <label>صورة الدورة</label>
-            <p class="muted">سيتم استخدام صورة الأكريليك تلقائيًا: /static/acrylic1.jpg</p>
+            <p class="muted">سيتم استخدام: <b>/static/acrylic1.jpg</b></p>
           </div>
 
           <div class="field full">
@@ -115,18 +92,15 @@
           </div>
         </div>
       </form>
-
-      <p class="muted">السعر غير ظاهر للزوار.</p>
     </div>
 
     <hr class="hr"/>
 
-    <!-- Existing workshops -->
     <div class="section">
       <h2>الدورات المنشورة</h2>
 
       {% if workshops|length == 0 %}
-        <div class="notice">لا توجد دورات بعد. أضف أول دورة ✨</div>
+        <div class="notice">لا توجد دورات بعد ✨</div>
       {% endif %}
 
       <div class="grid">
@@ -166,18 +140,16 @@
             </a>
 
             <div style="display:flex; gap:8px;">
-              <button class="btn small" type="button"
-                onclick="openEdit(
-                  '{{ w.id }}',
-                  '{{ w.title|e }}',
-                  '{{ w.location|e }}',
-                  '{{ w.date|default('', true)|e }}',
-                  '{{ w.time|default('', true)|e }}',
-                  '{{ w.seats_total }}',
-                  '{{ w.lessons_count|default('', true) }}',
-                  '{{ w.age_range|default('', true)|e }}',
-                  '{{ w.description|e }}'
-                )">
+              <button class="btn small edit-btn" type="button"
+                data-id="{{ w.id }}"
+                data-title="{{ w.title|e }}"
+                data-location="{{ w.location|e }}"
+                data-date="{{ w.date|default('', true)|e }}"
+                data-time="{{ w.time|default('', true)|e }}"
+                data-seats="{{ w.seats_total }}"
+                data-lessons="{{ w.lessons_count|default('', true) }}"
+                data-age="{{ w.age_range|default('', true)|e }}"
+                data-desc="{{ w.description|e }}">
                 تعديل
               </button>
 
@@ -192,7 +164,6 @@
       </div>
     </div>
 
-    <!-- Edit workshop panel -->
     <div class="section" id="editBox" style="display:none;">
       <h2>تعديل الدورة</h2>
 
@@ -212,12 +183,12 @@
 
           <div class="field third">
             <label>التاريخ (اختياري)</label>
-            <input name="date" id="edit_date" placeholder="مثال: 2026-02-10">
+            <input name="date" id="edit_date">
           </div>
 
           <div class="field third">
             <label>الوقت (اختياري)</label>
-            <input name="time" id="edit_time" placeholder="مثال: 18:00">
+            <input name="time" id="edit_time">
           </div>
 
           <div class="field third">
@@ -227,17 +198,12 @@
 
           <div class="field third">
             <label>عدد اللقاءات (اختياري)</label>
-            <input name="lessons_count" id="edit_lessons" type="number" min="1" placeholder="مثال: 10">
+            <input name="lessons_count" id="edit_lessons" type="number" min="1">
           </div>
 
           <div class="field">
             <label>العمر المناسب (اختياري)</label>
             <input name="age_range" id="edit_age_range">
-          </div>
-
-          <div class="field">
-            <label>صورة الدورة</label>
-            <p class="muted">عند الحفظ سيتم استخدام: /static/acrylic1.jpg</p>
           </div>
 
           <div class="field full">
@@ -256,25 +222,28 @@
   </div>
 
   <script>
-    function openEdit(id, title, location, date, time, seats_total, lessons_count, age_range, description){
-      document.getElementById('edit_id').value = id;
-      document.getElementById('edit_title').value = title;
-      document.getElementById('edit_location').value = location;
-      document.getElementById('edit_date').value = date || "";
-      document.getElementById('edit_time').value = time || "";
-      document.getElementById('edit_seats').value = seats_total;
-      document.getElementById('edit_lessons').value = lessons_count || "";
-      document.getElementById('edit_age_range').value = age_range || "";
-      document.getElementById('edit_desc').value = description;
+    document.querySelectorAll(".edit-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        document.getElementById("edit_id").value = btn.dataset.id;
+        document.getElementById("edit_title").value = btn.dataset.title;
+        document.getElementById("edit_location").value = btn.dataset.location;
+        document.getElementById("edit_date").value = btn.dataset.date || "";
+        document.getElementById("edit_time").value = btn.dataset.time || "";
+        document.getElementById("edit_seats").value = btn.dataset.seats;
+        document.getElementById("edit_lessons").value = btn.dataset.lessons || "";
+        document.getElementById("edit_age_range").value = btn.dataset.age || "";
+        document.getElementById("edit_desc").value = btn.dataset.desc;
 
-      const box = document.getElementById('editBox');
-      box.style.display = "block";
-      box.scrollIntoView({behavior:"smooth"});
-    }
+        const box = document.getElementById("editBox");
+        box.style.display = "block";
+        box.scrollIntoView({ behavior: "smooth" });
+      });
+    });
 
-    function closeEdit(){
-      document.getElementById('editBox').style.display = "none";
+    function closeEdit() {
+      document.getElementById("editBox").style.display = "none";
     }
   </script>
+
 </body>
 </html>
