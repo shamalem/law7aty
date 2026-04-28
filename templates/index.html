@@ -35,19 +35,19 @@
   <div class="hero-text">
     <h2>أهلًا في لوحتي 🎨</h2>
     <p>
-      مساحة فنية هادئة وإبداعية، تتعلمي فيها الرسم خطوة بخطوة،
-      وتعيشي تجربة ممتعة وتطلعي بلوحات من إبداعك 🤍  
-      ما بتحتاجي أي خبرة — بس حبك للفن ✨
+      مساحة فنية هادئة وإبداعية، يمكن للجميع فيها تعلّم الرسم خطوة بخطوة،
+      وخوض تجربة ممتعة والخروج بلوحات من الإبداع الشخصي 🤍  
+      لا حاجة لأي خبرة مسبقة — فقط حب الفن ✨
     </p>
 
     <div class="hero-actions">
-      <a class="btn primary" href="#workshops">احجزي الآن</a>
-      <a class="btn" href="#about">تعرفي علينا</a>
+      <a class="btn primary" href="#workshops">احجز الآن</a>
+      <a class="btn" href="#about">تعرّف علينا</a>
       <a class="btn" href="{{ instagram_url }}" target="_blank">إنستغرام</a>
     </div>
 
     <div class="hero-mini">
-      <span class="pill">✨ مناسب للمبتدئات</span>
+      <span class="pill">✨ مناسب للمبتدئين</span>
       <span class="pill">🎨 شرح خطوة بخطوة</span>
       <span class="pill">💗 أجواء مريحة</span>
     </div>
@@ -69,10 +69,10 @@
   <h2>من نحن</h2>
 
   <p class="about-text">
-    <b>لوحتي</b> هي مساحة فنية مخصصة لكل شخص بحب الإبداع،
-    حتى لو حاسة إنك ما بتعرفي ترسمي.  
-    بنعتمد أسلوب بسيط، أجواء هادئة، وبنساعدك تبني ثقة بنفسك.  
-    بكل ورشة بتطلعي بلوحتك الخاصة 🎀
+    <b>لوحتي</b> هي مساحة فنية مخصصة لكل من يحب الإبداع،
+    حتى لمن يعتقد أنه لا يعرف الرسم.
+    نعتمد أسلوبًا بسيطًا، أجواء هادئة، وتجربة تساعد على بناء الثقة.
+    في كل ورشة، يخرج المشاركون بعمل فني خاص من إبداعهم 🎀
   </p>
 
   <div class="about-grid">
@@ -83,7 +83,7 @@
 
     <div class="about-item">
       <div class="about-title">لمن هذه الدورات؟</div>
-      <div class="muted">مبتدئات • بنات • كبار • أي شخص حاب يجرب</div>
+      <div class="muted">مبتدئون • شباب • كبار • كل من يرغب بتجربة فنية جديدة</div>
     </div>
 
     <div class="about-item">
@@ -99,7 +99,7 @@
 <!-- Workshops -->
 <div class="section" style="margin-top:16px;">
   <h2 id="workshops">الدورات المتاحة</h2>
-  <p class="muted">اختاري دورتك وسجّلي خلال دقيقة ✨</p>
+  <p class="muted">اختر الدورة المناسبة وسجّل خلال دقيقة ✨</p>
 </div>
 
 <div class="grid">
@@ -135,7 +135,7 @@
       <span class="muted">رقم الدورة: {{ w.id }}</span>
       <button class="btn primary" type="button"
         onclick="openRegister('{{ w.id }}','{{ w.title|e }}')">
-        احجزي
+        احجز
       </button>
     </div>
   </div>
@@ -145,7 +145,7 @@
 <!-- Register -->
 <div class="section" id="registerBox" style="display:none;">
   <h2 id="regTitle">التسجيل</h2>
-  <p class="muted">عبّي بياناتك لحجز مكانك 💗</p>
+  <p class="muted">املأ البيانات لحجز مكانك 💗</p>
 
   <form action="{{ url_for('register') }}" method="POST">
     <input type="hidden" name="workshop_id" id="workshop_id">
