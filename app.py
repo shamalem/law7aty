@@ -9,29 +9,28 @@ from supabase import create_client
 
 app = Flask(__name__)
 
-# --- Environment Variables ---
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+# --- إعدادات البيئة (Environment Variables) ---
+app.secret_key = os.environ.get("SECRET_KEY", "law7aty-secure-key-2026")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# Supabase Config (Add these in Render Env Vars)
+# إعدادات سوبابيس لتخزين الصور
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
-# Default Assets
+# أصول ثابتة (Assets)
 HOME_IMAGE_URL = "/static/home.jpg"
 ACRYLIC_IMAGE_URL = "/static/acrylic1.png"
-
 INSTAGRAM_URL = os.environ.get(
     "INSTAGRAM_URL",
     "https://www.instagram.com/law7atiii?igsh=MXN5YnQ0bTM0c3l3Zg%3D%3D&utm_source=qr"
 )
 
-# --- Database Helpers ---
+# --- مساعدات قاعدة البيانات (Database Helpers) ---
 def get_db():
     if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL is missing. Add it in Render.")
+        raise RuntimeError("DATABASE_URL is missing. Add it in Render Environment Variables.")
     return psycopg2.connect(
         DATABASE_URL,
         cursor_factory=psycopg2.extras.RealDictCursor
@@ -41,7 +40,7 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
-    # Table 1: Workshops
+    # جدول الورشات
     cur.execute("""
     CREATE TABLE IF NOT EXISTS workshops (
         id SERIAL PRIMARY KEY,
@@ -57,7 +56,7 @@ def init_db():
     )
     """)
 
-    # Table 2: Registrations
+    # جدول التسجيلات
     cur.execute("""
     CREATE TABLE IF NOT EXISTS registrations (
         id SERIAL PRIMARY KEY,
@@ -74,20 +73,20 @@ def init_db():
     )
     """)
 
-    # Table 3: Settings
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS settings (
-        id INTEGER PRIMARY KEY,
-        hero_image_url TEXT
-    )
-    """)
-
-    # Table 4: Student Gallery (New!)
+    # جدول معرض إبداعات الطلاب (الجديد)
     cur.execute("""
     CREATE TABLE IF NOT EXISTS student_gallery (
         id SERIAL PRIMARY KEY,
         image_url TEXT,
         student_name TEXT
+    )
+    """)
+
+    # جدول الإعدادات العامة
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS settings (
+        id INTEGER PRIMARY KEY,
+        hero_image_url TEXT
     )
     """)
 
@@ -101,9 +100,10 @@ def init_db():
     cur.close()
     conn.close()
 
+# تشغيل تهيئة قاعدة البيانات عند بدء التطبيق
 init_db()
 
-# --- Auth Decorator ---
+# --- مزخرف الحماية (Auth Decorator) ---
 def admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -112,7 +112,7 @@ def admin_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
-# --- CUSTOMER ROUTES ---
+# --- مسارات الزوار (CUSTOMER ROUTES) ---
 
 @app.route("/")
 def customer_page():
@@ -141,7 +141,7 @@ def customer_page():
 
 @app.route("/gallery")
 def student_creations():
-    """The new page for student artwork."""
+    """عرض معرض إبداعات الطلاب"""
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM student_gallery ORDER BY id DESC")
@@ -172,7 +172,7 @@ def register():
     conn.close()
     return redirect(url_for("customer_page"))
 
-# --- ADMIN ROUTES ---
+# --- مسارات الإدارة (ADMIN ROUTES) ---
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
@@ -194,8 +194,10 @@ def admin_logout():
 def admin_page():
     conn = get_db()
     cur = conn.cursor()
+    # جلب الورشات مع عدد المسجلين
     cur.execute("SELECT w.*, (SELECT COUNT(*) FROM registrations r WHERE r.workshop_id = w.id) AS reg_count FROM workshops w ORDER BY id DESC")
     workshops = cur.fetchall()
+    # جلب صور المعرض
     cur.execute("SELECT * FROM student_gallery ORDER BY id DESC")
     gallery_items = cur.fetchall()
     cur.close()
@@ -205,19 +207,15 @@ def admin_page():
 @app.route("/admin/gallery/add", methods=["POST"])
 @admin_required
 def admin_add_gallery():
-    """Uploads student art to Supabase and saves link to Postgres."""
+    """رفع صورة لـ Supabase وحفظ الرابط في Postgres"""
     name = request.form.get("student_name", "").strip()
     file = request.files.get("img")
 
     if file and supabase_client:
-        # 1. Upload to Supabase Storage
-        file_path = f"gallery/{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
-        supabase_client.storage.from_('law7aty-gallery').upload(file_path, file.read())
-        
-        # 2. Get Public URL
-        image_url = supabase_client.storage.from_('law7aty-gallery').get_public_url(file_path)
+        filename = f"gallery/{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
+        supabase_client.storage.from_('law7aty-gallery').upload(filename, file.read())
+        image_url = supabase_client.storage.from_('law7aty-gallery').get_public_url(filename)
 
-        # 3. Save to Local PostgreSQL
         conn = get_db()
         cur = conn.cursor()
         cur.execute("INSERT INTO student_gallery (image_url, student_name) VALUES (%s, %s)", 
@@ -226,6 +224,20 @@ def admin_add_gallery():
         cur.close()
         conn.close()
 
+    return redirect(url_for("admin_page"))
+
+@app.route("/admin/gallery/delete", methods=["POST"])
+@admin_required
+def admin_delete_gallery():
+    """حذف صورة من المعرض"""
+    post_id = request.form.get("post_id")
+    if post_id:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM student_gallery WHERE id = %s", (int(post_id),))
+        conn.commit()
+        cur.close()
+        conn.close()
     return redirect(url_for("admin_page"))
 
 @app.route("/admin/workshops/add", methods=["POST"])
@@ -247,10 +259,24 @@ def admin_add_workshop():
     conn.close()
     return redirect(url_for("admin_page"))
 
-# --- HEALTH CHECK ---
+@app.route("/admin/workshops/delete", methods=["POST"])
+@admin_required
+def admin_delete_workshop():
+    workshop_id = request.form.get("workshop_id")
+    if workshop_id:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM registrations WHERE workshop_id = %s", (int(workshop_id),))
+        cur.execute("DELETE FROM workshops WHERE id = %s", (int(workshop_id),))
+        conn.commit()
+        cur.close()
+        conn.close()
+    return redirect(url_for("admin_page"))
+
+# --- فحص الحالة (Health Check) ---
 @app.route("/health")
 def health():
-    return {"status": "ok", "supabase": "connected" if supabase_client else "missing"}
+    return {"status": "ok", "database": "connected", "supabase": "ready" if supabase_client else "offline"}
 
 if __name__ == "__main__":
     app.run(debug=True)
