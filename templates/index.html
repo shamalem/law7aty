@@ -110,7 +110,9 @@
       {% else %}
         <img src="https://via.placeholder.com/1000x600.png?text=Law7aty" alt="">
       {% endif %}
-      <div class="badge">المقاعد المتبقية: {{ w.seats_left }}</div>
+      {% if w.seats_left <= 2 %}
+       <div class="badge">المقاعد المتبقية: {{ w.seats_left }}</div>
+{% endif %}
     </div>
 
     <div class="card-body">
