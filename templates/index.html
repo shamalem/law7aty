@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>لوحتي — الرئيسية</title>
+  <title>لوحتي — مساحة للإبداع 🎨</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
@@ -11,7 +11,7 @@
 
     <div class="topbar">
       <div class="brand">
-        <img class="brand-logo" src="{{ url_for('static', filename='logo.png') }}" alt="لوحتي">
+        <div class="logo">🎨</div>
         <div>
           <h1>لوحتي 🎀</h1>
           <p>ورشات فنية متنوعة </p>
@@ -20,8 +20,8 @@
 
       <div class="actions">
         <a class="btn" href="#about">من نحن</a>
-        <a class="btn" href="{{ url_for('student_creations') }}">إبداعات الطلاب</a> 
         <a class="btn primary" href="#workshops">الدورات</a>
+        <a class="btn" href="{{ url_for('student_creations') }}">المعرض</a>
         <a class="btn" href="{{ instagram_url }}" target="_blank">إنستغرام</a>
       </div>
     </div>
@@ -30,18 +30,18 @@
       <div class="hero-text">
         <h2>أهلًا في لوحتي 🎨</h2>
         <p>
-          مساحة فنية هادئة وإبداعية، يمكن للجميع فيها تعلّم الرسم خطوة بخطوة،
-          وخوض تجربة ممتعة والخروج بلوحات من الإبداع الشخصي 🤍  
-          لا حاجة لأي خبرة مسبقة — فقط حب الفن ✨
+          مساحة فنية هادئة وإبداعية، تتعلمي فيها الرسم خطوة بخطوة،
+          وتعيشي تجربة ممتعة وتطلعي بلوحات من إبداعك 🤍  
+          ما بتحتاجي أي خبرة — بس حبك للفن ✨
         </p>
 
         <div class="hero-actions">
-          <a class="btn primary" href="#workshops">احجز الآن</a>
-          <a class="btn" href="{{ url_for('student_creations') }}">مشاهدة المعرض</a>
+          <a class="btn primary" href="#workshops">احجزي مكانك</a>
+          <a class="btn" href="{{ url_for('student_creations') }}">رؤية إبداعاتنا</a>
         </div>
 
         <div class="hero-mini">
-          <span class="pill">✨ مناسب للمبتدئين</span>
+          <span class="pill">✨ مناسب للمبتدئات</span>
           <span class="pill">🎨 شرح خطوة بخطوة</span>
           <span class="pill">💗 أجواء مريحة</span>
         </div>
@@ -49,11 +49,7 @@
 
       <div class="hero-card">
         <div class="hero-img">
-          {% if hero_image_url %}
-            <img src="{{ hero_image_url }}" alt="لوحتي">
-          {% else %}
-            <img src="/static/home.jpg" alt="لوحتي">
-          {% endif %}
+          <img src="{{ hero_image_url or '/static/home.jpg' }}" alt="مرسم لوحتي">
         </div>
       </div>
     </div>
@@ -61,75 +57,97 @@
     <div class="section" id="about">
       <h2>من نحن</h2>
       <p class="about-text">
-        <b>لوحتي</b> هي مساحة فنية لكل شخص بحب الإبداع، حتى لو حاسس إنه ما بعرف يرسم 🤍  
-        الفكرة ببساطة إنك تجي، ترتاح، وتتعلم الرسم خطوة بخطوة بدون ضغط أو تعقيد.  
-        الأجواء هادئة ولطيفة، وكل حدا بيمشي حسب مستواه، ومع الوقت رح يشوف تطوّر حقيقي بشغله 🎨💕
+        <b>لوحتي</b> هي مساحة فنية مخصصة لكل شخص بحب الإبداع،
+        حتى لو حاسة إنك ما بتعرفي ترسمي. نعتمد أسلوب بسيط، أجواء هادئة، وبنساعدك تبني ثقة بنفسك. بكل ورشة بتطلعي بلوحتك الخاصة 🎀
       </p>
 
-    
+      <div class="about-grid">
+        <div class="about-item">
+          <div class="about-title">ماذا نقدم</div>
+          <div class="muted">رسم أكريليك • تلوين على الأكواب • ورشات خاصة</div>
+        </div>
+
         <div class="about-item">
           <div class="about-title">لمن هذه الدورات؟</div>
-          <div class="muted">مبتدئون • شباب • كبار • تجارب فنية جديدة</div>
+          <div class="muted">مبتدئات • بنات • كبار • محبات الفن</div>
+        </div>
+
+        <div class="about-item">
+          <div class="about-title">تواصل معنا</div>
+          <div class="muted">
+            عبر إنستغرام: 
+            <a href="{{ instagram_url }}" target="_blank" style="text-decoration:none; color:#d63384;">@law7atiii</a>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="section" id="workshops">
+    <div class="section" id="workshops" style="margin-top:16px;">
       <h2>الدورات المتاحة</h2>
-      <p class="muted">اختر الدورة المناسبة وسجّل خلال دقيقة ✨</p>
-      
-      <div class="grid">
-        {% for w in workshops %}
-        <div class="card">
-          <div class="cover">
-            {% if w.image_url %}
-              <img src="{{ w.image_url }}" alt="دورة">
-            {% else %}
-              <img src="/static/acrylic1.png" alt="دورة">
-            {% endif %}
-            
-            {% if w.seats_left <= 2 and w.seats_left > 0 %}
-              <div class="badge">بقي {{ w.seats_left }} مقاعد!</div>
-            {% elif w.seats_left == 0 %}
-              <div class="badge danger">مكتمل</div>
-            {% endif %}
-          </div>
+      <p class="muted">اختاري دورتك وسجّلي خلال دقيقة ✨</p>
+    </div>
 
-          <div class="card-body">
-            <h3 class="title">{{ w.title }}</h3>
-            <div class="meta">
-              {% if w.date %}<span class="pill">📅 {{ w.date }}</span>{% endif %}
-              {% if w.location %}<span class="pill">📍 {{ w.location }}</span>{% endif %}
-            </div>
-            <p class="desc">{{ w.description }}</p>
-          </div>
-
-          <div class="card-footer">
-            <span class="muted">رقم: {{ w.id }}</span>
-            <button class="btn primary" type="button" 
-                    onclick="openRegister('{{ w.id }}','{{ w.title|e }}')">
-              احجز مكانك
-            </button>
-          </div>
+    <div class="grid">
+      {% for w in workshops %}
+      <div class="card">
+        <div class="cover">
+          <img src="{{ w.image_url or '/static/acrylic1.png' }}" alt="دورة رسم">
+          {% if w.seats_left > 0 %}
+            <div class="badge">المقاعد المتبقية: {{ w.seats_left }}</div>
+          {% else %}
+            <div class="badge danger">انتهت المقاعد</div>
+          {% endif %}
         </div>
-        {% endfor %}
+
+        <div class="card-body">
+          <h3 class="title">{{ w.title }}</h3>
+          <div class="meta">
+            <span class="pill">📍 {{ w.location }}</span>
+            {% if w.seats_left <= 2 and w.seats_left > 0 %}
+              <span class="pill warning">🔥 مقاعد محدودة جداً</span>
+            {% endif %}
+          </div>
+          <p class="desc">{{ w.description }}</p>
+        </div>
+
+        <div class="card-footer">
+          <span class="muted">دورة رقم #{{ w.id }}</span>
+          {% if w.seats_left > 0 %}
+            <button class="btn primary" type="button"
+              onclick="openRegister('{{ w.id }}','{{ w.title|e }}')">
+              احجزي
+            </button>
+          {% else %}
+            <button class="btn muted" disabled>مكتمل</button>
+          {% endif %}
+        </div>
       </div>
+      {% endfor %}
     </div>
 
-    <div class="section" style="text-align: center; background: #fff5f7; padding: 40px; border-radius: 20px; margin-top: 40px;">
-      <h2>فخورون بإبداعات طلابنا ❤️</h2>
-      <p class="muted">شاهد اللوحات الفنية التي خرجت من ورشاتنا السابقة بريشة المبدعين</p>
-      <a class="btn primary" href="{{ url_for('student_creations') }}" style="margin-top: 15px;">انتقل للمعرض الفني 🎨</a>
-    </div>
-
-    <div class="section" id="registerBox" style="display:none; margin-top: 30px;">
+    <div class="section" id="registerBox" style="display:none; background: #fffafb; border: 1px solid #ffe4e9; border-radius: 15px;">
       <h2 id="regTitle">التسجيل</h2>
+      <p class="muted">عبّي بياناتك لحجز مكانك 💗</p>
+
       <form action="{{ url_for('register') }}" method="POST">
         <input type="hidden" name="workshop_id" id="workshop_id">
+
         <div class="form-row">
-          <div class="field"><label>الاسم الكامل</label><input name="name" required></div>
-          <div class="field"><label>رقم الهاتف</label><input name="phone" required></div>
-          <div class="field third"><label>العمر</label><input name="age" type="number" required></div>
+          <div class="field">
+            <label>الاسم الكامل</label>
+            <input name="name" required placeholder="اسمهك الثلاثي">
+          </div>
+
+          <div class="field">
+            <label>رقم الهاتف</label>
+            <input name="phone" required placeholder="05x-xxxxxxx">
+          </div>
+
+          <div class="field third">
+            <label>العمر</label>
+            <input name="age" type="number" min="4" max="100" required>
+          </div>
+
           <div class="field full">
             <button class="btn primary" type="submit">تأكيد الحجز ✅</button>
             <button class="btn" type="button" onclick="closeRegister()">إلغاء</button>
@@ -138,26 +156,28 @@
       </form>
     </div>
 
-    <div class="footer-mini">
-  <div class="muted">
-    © لوحتي — صنع بحب 💗 
-    <a href="{{ url_for('admin_login') }}" style="text-decoration:none; color:inherit; opacity:0.3;">.</a>
-  </div>
-</div>
+    <footer style="margin-top: 80px; padding: 40px; text-align: center; border-top: 1px solid #eee;">
+      <div class="muted">
+        © جميع الحقوق محفوظة لمرسم لوحتي 2026 🎀
+        <br>
+        <a href="{{ url_for('admin_login') }}" style="text-decoration:none; color:inherit; opacity:0.2;">.</a>
+      </div>
+    </footer>
 
   </div>
 
   <script>
     function openRegister(id, title){
       document.getElementById('workshop_id').value = id;
-      document.getElementById('regTitle').textContent = "التسجيل في " + title;
+      document.getElementById('regTitle').textContent = "التسجيل في — " + title;
       document.getElementById('registerBox').style.display = "block";
       document.getElementById('registerBox').scrollIntoView({behavior:"smooth"});
     }
+
     function closeRegister(){
       document.getElementById('registerBox').style.display = "none";
     }
   </script>
+
 </body>
-  
 </html>
