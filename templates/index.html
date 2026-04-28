@@ -14,7 +14,7 @@
         <div class="logo">🎨</div>
         <div>
           <h1>لوحتي 🎀</h1>
-          <p>ورشات فنية متنوعة </p>
+           <p>ورشات فنية متنوعة 🎨 </p>
         </div>
       </div>
 
@@ -92,10 +92,12 @@
       <div class="card">
         <div class="cover">
           <img src="{{ w.image_url or '/static/acrylic1.png' }}" alt="دورة رسم">
-          {% if w.seats_left > 0 %}
-            <div class="badge">المقاعد المتبقية: {{ w.seats_left }}</div>
-          {% else %}
-            <div class="badge danger">انتهت المقاعد</div>
+          
+          {# تظهر الحالة فقط إذا كانت المقاعد قليلة جداً أو منتهية #}
+          {% if w.seats_left <= 2 and w.seats_left > 0 %}
+            <div class="badge warning">بقي {{ w.seats_left }} مقاعد فقط! 🔥</div>
+          {% elif w.seats_left == 0 %}
+            <div class="badge danger">مكتمل العدد 🔒</div>
           {% endif %}
         </div>
 
@@ -104,7 +106,7 @@
           <div class="meta">
             <span class="pill">📍 {{ w.location }}</span>
             {% if w.seats_left <= 2 and w.seats_left > 0 %}
-              <span class="pill warning">🔥 مقاعد محدودة جداً</span>
+              <span class="pill warning">⚠️ سارعي بالحجز</span>
             {% endif %}
           </div>
           <p class="desc">{{ w.description }}</p>
@@ -118,7 +120,7 @@
               احجزي
             </button>
           {% else %}
-            <button class="btn muted" disabled>مكتمل</button>
+            <button class="btn muted" disabled style="cursor: not-allowed; opacity: 0.6;">مكتمل</button>
           {% endif %}
         </div>
       </div>
@@ -132,52 +134,4 @@
       <form action="{{ url_for('register') }}" method="POST">
         <input type="hidden" name="workshop_id" id="workshop_id">
 
-        <div class="form-row">
-          <div class="field">
-            <label>الاسم الكامل</label>
-            <input name="name" required placeholder="اسمهك الثلاثي">
-          </div>
-
-          <div class="field">
-            <label>رقم الهاتف</label>
-            <input name="phone" required placeholder="05x-xxxxxxx">
-          </div>
-
-          <div class="field third">
-            <label>العمر</label>
-            <input name="age" type="number" min="4" max="100" required>
-          </div>
-
-          <div class="field full">
-            <button class="btn primary" type="submit">تأكيد الحجز ✅</button>
-            <button class="btn" type="button" onclick="closeRegister()">إلغاء</button>
-          </div>
-        </div>
-      </form>
-    </div>
-
-    <footer style="margin-top: 80px; padding: 40px; text-align: center; border-top: 1px solid #eee;">
-      <div class="muted">
-        © جميع الحقوق محفوظة لمرسم لوحتي 2026 🎀
-        <br>
-        <a href="{{ url_for('admin_login') }}" style="text-decoration:none; color:inherit; opacity:0.2;">.</a>
-      </div>
-    </footer>
-
-  </div>
-
-  <script>
-    function openRegister(id, title){
-      document.getElementById('workshop_id').value = id;
-      document.getElementById('regTitle').textContent = "التسجيل في — " + title;
-      document.getElementById('registerBox').style.display = "block";
-      document.getElementById('registerBox').scrollIntoView({behavior:"smooth"});
-    }
-
-    function closeRegister(){
-      document.getElementById('registerBox').style.display = "none";
-    }
-  </script>
-
-</body>
-</html>
+        <div class="form-row
