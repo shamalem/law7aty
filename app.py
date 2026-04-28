@@ -248,12 +248,24 @@ def admin_add_workshop():
     location = request.form.get("location", "").strip()
     seats_total = request.form.get("seats_total", "0")
     
+    # 1. Handle the Image Upload
+    file = request.files.get("workshop_img")
+    image_url = ACRYLIC_IMAGE_URL  # Default if no file is uploaded
+    
+    if file and supabase_client:
+        # Save to a 'workshops' folder in your bucket
+        filename = f"workshops/{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
+        supabase_client.storage.from_('law7aty-gallery').upload(filename, file.read())
+        image_url = supabase_client.storage.from_('law7aty-gallery').get_public_url(filename)
+
+    # 2. Insert into Postgres
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
         INSERT INTO workshops (title, description, location, seats_total, image_url)
         VALUES (%s, %s, %s, %s, %s)
-    """, (title, description, location, int(seats_total), ACRYLIC_IMAGE_URL))
+    """, (title, description, location, int(seats_total), image_url))
+    
     conn.commit()
     cur.close()
     conn.close()
