@@ -71,32 +71,38 @@
     <hr class="hr"/>
 
     <div class="section" id="add-workshop">
-      <h2>إضافة دورة جديدة ➕</h2>
-      <form action="{{ url_for('admin_add_workshop') }}" method="POST">
-        <div class="form-row">
-          <div class="field">
-            <label>عنوان الدورة</label>
-            <input name="title" required placeholder="مثال: ورشة الأكريليك للمبتدئين">
-          </div>
-          <div class="field">
-            <label>المكان</label>
-            <input name="location" required placeholder="مثال: استوديو حيفا">
-          </div>
-          <div class="field third">
-            <label>عدد المقاعد</label>
-            <input name="seats_total" type="number" min="1" required>
-          </div>
-          <div class="field full">
-            <label>وصف الدورة</label>
-            <textarea name="description" required placeholder="ماذا سنتعلم في هذه الورشة؟"></textarea>
-          </div>
-          <div class="field full">
-            <button class="btn primary" type="submit">نشر الدورة الجديدة 🚀</button>
-          </div>
-        </div>
-      </form>
-    </div>
+      <div class="section" id="add-workshop">
+  <h2>إضافة دورة جديدة ➕</h2>
+  <form action="{{ url_for('admin_add_workshop') }}" method="POST" enctype="multipart/form-data">
+    <div class="form-row">
+      <div class="field">
+        <label>عنوان الدورة</label>
+        <input name="title" required>
+      </div>
+      <div class="field">
+        <label>المكان</label>
+        <input name="location" required>
+      </div>
+      <div class="field third">
+        <label>عدد المقاعد</label>
+        <input name="seats_total" type="number" min="1" required>
+      </div>
+      
+      <div class="field">
+        <label>بوستر الدورة (صورة)</label>
+        <input type="file" name="workshop_img" accept="image/*">
+      </div>
 
+      <div class="field full">
+        <label>وصف الدورة</label>
+        <textarea name="description" required></textarea>
+      </div>
+      <div class="field full">
+        <button class="btn primary" type="submit">نشر الدورة الجديدة 🚀</button>
+      </div>
+    </div>
+  </form>
+</div>
     <hr class="hr"/>
 
     <div class="section">
