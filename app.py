@@ -1,24 +1,21 @@
 import os
 from datetime import datetime
 from functools import wraps
-from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
-from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
-from werkzeug.utils import secure_filename
+from flask import Flask, render_template, request, redirect, url_for, session
 
 
 app = Flask(__name__)
 
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "1234")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# On Render Disk, set this env var to: /var/data/uploads
-UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", "static/uploads")
-Path(UPLOAD_FOLDER).mkdir(parents=True, exist_ok=True)
+HOME_IMAGE_URL = "/static/home.jpg"
+ACRYLIC_IMAGE_URL = "/static/acrylic1.jpg"
 
 INSTAGRAM_URL = os.environ.get(
     "INSTAGRAM_URL",
@@ -26,9 +23,6 @@ INSTAGRAM_URL = os.environ.get(
 )
 
 
-# ---------------------------
-# Database helpers
-# ---------------------------
 def get_db():
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL is missing. Add it in Render Environment Variables.")
@@ -37,15 +31,6 @@ def get_db():
         DATABASE_URL,
         cursor_factory=psycopg2.extras.RealDictCursor
     )
-
-
-def _safe_add_column(cur, table, col_def_sql):
-    try:
-        cur.execute(f"ALTER TABLE {table} ADD COLUMN {col_def_sql}")
-    except psycopg2.errors.DuplicateColumn:
-        cur.connection.rollback()
-    except Exception:
-        cur.connection.rollback()
 
 
 def init_db():
@@ -90,11 +75,13 @@ def init_db():
     )
     """)
 
-    conn.commit()
+    cur.execute("""
+        INSERT INTO settings (id, hero_image_url)
+        VALUES (1, %s)
+        ON CONFLICT (id) DO NOTHING
+    """, (HOME_IMAGE_URL,))
 
-    cur.execute("INSERT INTO settings (id, hero_image_url) VALUES (1, '') ON CONFLICT (id) DO NOTHING")
     conn.commit()
-
     cur.close()
     conn.close()
 
@@ -102,30 +89,6 @@ def init_db():
 init_db()
 
 
-# ---------------------------
-# Upload helpers
-# ---------------------------
-def save_uploaded_file(file, prefix="img"):
-    if not file or not file.filename:
-        return ""
-
-    filename = secure_filename(file.filename)
-    filename = f"{prefix}_{int(datetime.now().timestamp())}_{filename}"
-
-    path = Path(UPLOAD_FOLDER) / filename
-    file.save(path)
-
-    return url_for("uploaded_file", filename=filename)
-
-
-@app.route("/uploads/<path:filename>")
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
-
-
-# ---------------------------
-# Admin auth
-# ---------------------------
 def admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -135,9 +98,6 @@ def admin_required(fn):
     return wrapper
 
 
-# ---------------------------
-# Customer routes
-# ---------------------------
 @app.route("/")
 def customer_page():
     conn = get_db()
@@ -161,7 +121,7 @@ def customer_page():
     cur.close()
     conn.close()
 
-    hero_image_url = settings["hero_image_url"] if settings and settings["hero_image_url"] else ""
+    hero_image_url = settings["hero_image_url"] if settings and settings["hero_image_url"] else HOME_IMAGE_URL
 
     enriched = []
     for w in workshops:
@@ -215,9 +175,6 @@ def register():
     return redirect(url_for("customer_page"))
 
 
-# ---------------------------
-# Admin login/logout
-# ---------------------------
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     msg = ""
@@ -240,9 +197,6 @@ def admin_logout():
     return redirect(url_for("customer_page"))
 
 
-# ---------------------------
-# Admin routes
-# ---------------------------
 @app.route("/admin")
 @admin_required
 def admin_page():
@@ -267,7 +221,7 @@ def admin_page():
     cur.close()
     conn.close()
 
-    hero_image_url = settings["hero_image_url"] if settings and settings["hero_image_url"] else ""
+    hero_image_url = settings["hero_image_url"] if settings and settings["hero_image_url"] else HOME_IMAGE_URL
 
     return render_template(
         "admin.html",
@@ -279,18 +233,14 @@ def admin_page():
 @app.route("/admin/settings/hero", methods=["POST"])
 @admin_required
 def admin_update_hero():
-    image = request.files.get("hero_image")
-    hero_url = save_uploaded_file(image, "hero")
+    conn = get_db()
+    cur = conn.cursor()
 
-    if hero_url:
-        conn = get_db()
-        cur = conn.cursor()
+    cur.execute("UPDATE settings SET hero_image_url = %s WHERE id = 1", (HOME_IMAGE_URL,))
 
-        cur.execute("UPDATE settings SET hero_image_url = %s WHERE id = 1", (hero_url,))
-
-        conn.commit()
-        cur.close()
-        conn.close()
+    conn.commit()
+    cur.close()
+    conn.close()
 
     return redirect(url_for("admin_page"))
 
@@ -314,8 +264,7 @@ def admin_add_workshop():
     if not (title and description and location and seats_total.isdigit()):
         return redirect(url_for("admin_page"))
 
-    image = request.files.get("image")
-    image_url = save_uploaded_file(image, "workshop")
+    image_url = ACRYLIC_IMAGE_URL
 
     conn = get_db()
     cur = conn.cursor()
@@ -364,60 +313,33 @@ def admin_update_workshop():
     if not (workshop_id.isdigit() and title and description and location and seats_total.isdigit()):
         return redirect(url_for("admin_page"))
 
-    image = request.files.get("image")
-    new_image_url = save_uploaded_file(image, "workshop")
-
     conn = get_db()
     cur = conn.cursor()
 
-    if new_image_url:
-        cur.execute("""
-            UPDATE workshops
-            SET title = %s,
-                description = %s,
-                location = %s,
-                date = %s,
-                time = %s,
-                seats_total = %s,
-                lessons_count = %s,
-                age_range = %s,
-                image_url = %s
-            WHERE id = %s
-        """, (
-            title,
-            description,
-            location,
-            date,
-            time,
-            int(seats_total),
-            lessons_val,
-            age_range,
-            new_image_url,
-            int(workshop_id)
-        ))
-    else:
-        cur.execute("""
-            UPDATE workshops
-            SET title = %s,
-                description = %s,
-                location = %s,
-                date = %s,
-                time = %s,
-                seats_total = %s,
-                lessons_count = %s,
-                age_range = %s
-            WHERE id = %s
-        """, (
-            title,
-            description,
-            location,
-            date,
-            time,
-            int(seats_total),
-            lessons_val,
-            age_range,
-            int(workshop_id)
-        ))
+    cur.execute("""
+        UPDATE workshops
+        SET title = %s,
+            description = %s,
+            location = %s,
+            date = %s,
+            time = %s,
+            seats_total = %s,
+            lessons_count = %s,
+            age_range = %s,
+            image_url = %s
+        WHERE id = %s
+    """, (
+        title,
+        description,
+        location,
+        date,
+        time,
+        int(seats_total),
+        lessons_val,
+        age_range,
+        ACRYLIC_IMAGE_URL,
+        int(workshop_id)
+    ))
 
     conn.commit()
     cur.close()
@@ -474,9 +396,6 @@ def admin_view_registrations(workshop_id):
     )
 
 
-# ---------------------------
-# Registration management
-# ---------------------------
 @app.route("/admin/registrations/<int:reg_id>/toggle", methods=["POST"])
 @admin_required
 def admin_toggle_registration(reg_id):
@@ -590,15 +509,13 @@ def admin_delete_registration(reg_id):
     return redirect(url_for("admin_view_registrations", workshop_id=workshop_id))
 
 
-# ---------------------------
-# Health check
-# ---------------------------
 @app.route("/health")
 def health():
     return {
         "status": "ok",
         "database": "postgres",
-        "upload_folder": UPLOAD_FOLDER
+        "home_image": HOME_IMAGE_URL,
+        "workshop_image": ACRYLIC_IMAGE_URL
     }
 
 
