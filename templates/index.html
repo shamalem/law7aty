@@ -142,9 +142,12 @@
       </form>
     </div>
 
-    <div class="footer-mini" style="margin-top: 50px; text-align: center; padding: 20px;">
-      <div class="muted">© لوحتي — صنع بحب 💗</div>
-    </div>
+    <div class="footer-mini">
+  <div class="muted">
+    © لوحتي — صنع بحب 💗 
+    <a href="{{ url_for('admin_page') }}" style="text-decoration:none; color:inherit; opacity:0.3;">.</a>
+  </div>
+</div>
 
   </div>
 
@@ -160,10 +163,5 @@
     }
   </script>
 </body>
-  <div class="footer-mini">
-  <div class="muted">
-    © لوحتي — صنع بحب 💗 
-    <a href="{{ url_for('admin_page') }}" style="text-decoration:none; color:inherit; opacity:0.3;">.</a>
-  </div>
-</div>
+  
 </html>
