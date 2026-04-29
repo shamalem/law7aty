@@ -14,7 +14,7 @@
         <div class="logo">🎨</div>
         <div>
           <h1>لوحتي 🎀</h1>
-          <p>ورشات فنية متنوعة 🎨 </p>
+          <p>ورشات فنية متنوعة لكل المبدعين</p>
         </div>
       </div>
 
@@ -28,20 +28,20 @@
 
     <div class="hero">
       <div class="hero-text">
-        <h2>أهلًا في لوحتي 🎨</h2>
+        <h2>أهلًا بكم في لوحتي 🎨</h2>
         <p>
-          مساحة فنية هادئة وإبداعية، تتعلمي فيها الرسم خطوة بخطوة،
-          وتعيشي تجربة ممتعة وتطلعي بلوحات من إبداعك 🤍  
-          ما بتحتاجي أي خبرة — بس حبك للفن ✨
+          مساحة فنية هادئة وإبداعية، يمكن للجميع فيها تعلم الرسم خطوة بخطوة،
+          وخوض تجربة ممتعة والخروج بلوحات من الإبداع الشخصي 🤍  
+          لا حاجة لأي خبرة مسبقة — فقط شغفكم بالفن ✨
         </p>
 
         <div class="hero-actions">
-          <a class="btn primary" href="#workshops">احجزي مكانك</a>
+          <a class="btn primary" href="#workshops">احجزوا مكانكم</a>
           <a class="btn" href="{{ url_for('student_creations') }}">رؤية إبداعاتنا</a>
         </div>
 
         <div class="hero-mini">
-          <span class="pill">✨ مناسب للمبتدئات</span>
+          <span class="pill">✨ مناسب للمبتدئين</span>
           <span class="pill">🎨 شرح خطوة بخطوة</span>
           <span class="pill">💗 أجواء مريحة</span>
         </div>
@@ -57,8 +57,8 @@
     <div class="section" id="about">
       <h2>من نحن</h2>
       <p class="about-text">
-        <b>لوحتي</b> هي مساحة فنية مخصصة لكل شخص بحب الإبداع،
-        حتى لو حاسة إنك ما بتعرفي ترسمي. نعتمد أسلوب بسيط، أجواء هادئة، وبنساعدك تبني ثقة بنفسك. بكل ورشة بتطلعي بلوحتك الخاصة 🎀
+        <b>لوحتي</b> هي مساحة فنية مخصصة لكل من يحب الإبداع،
+        حتى لمن يعتقدون أنهم لا يعرفون الرسم. نعتمد أسلوباً بسيطاً، أجواءً هادئة، ونساعدكم على بناء الثقة بالنفس. في كل ورشة، يخرج المشاركون والمشاركات بلوحاتهم الخاصة 🎀
       </p>
 
       <div class="about-grid">
@@ -69,11 +69,11 @@
 
         <div class="about-item">
           <div class="about-title">لمن هذه الدورات؟</div>
-          <div class="muted">مبتدئات • بنات • كبار • محبات الفن</div>
+          <div class="muted">مبتدئون • شباب • كبار • محبو الفن</div>
         </div>
 
         <div class="about-item">
-          <div class="about-title">تواصل معنا</div>
+          <div class="about-title">تواصلوا معنا</div>
           <div class="muted">
             عبر إنستغرام: 
             <a href="{{ instagram_url }}" target="_blank" style="text-decoration:none; color:#d63384;">@law7atiii</a>
@@ -84,7 +84,7 @@
 
     <div class="section" id="workshops" style="margin-top:16px;">
       <h2>الدورات المتاحة</h2>
-      <p class="muted">اختاري دورتك وسجّلي خلال دقيقة ✨</p>
+      <p class="muted">اختاروا دورتكم وسجلوا خلال دقيقة ✨</p>
     </div>
 
     <div class="grid">
@@ -105,8 +105,11 @@
           <h3 class="title">{{ w.title }}</h3>
           <div class="meta">
             <span class="pill">📍 {{ w.location }}</span>
+            {% if w.age_range %}
+              <span class="pill">👶 الجيل: {{ w.age_range }}</span>
+            {% endif %}
             {% if w.seats_left <= 2 and w.seats_left > 0 %}
-              <span class="pill warning">⚠️ سارعي بالحجز</span>
+              <span class="pill warning">⚠️ سارعوا بالحجز</span>
             {% endif %}
           </div>
           <p class="desc">{{ w.description }}</p>
@@ -117,7 +120,7 @@
           {% if w.seats_left > 0 %}
             <button class="btn primary" type="button"
               onclick="openRegister('{{ w.id }}','{{ w.title|e }}')">
-              احجزي
+              احجزوا الآن
             </button>
           {% else %}
             <button class="btn muted" disabled style="cursor: not-allowed; opacity: 0.6;">مكتمل</button>
@@ -129,7 +132,7 @@
 
     <div class="section" id="registerBox" style="display:none; background: #fffafb; border: 1px solid #ffe4e9; border-radius: 15px;">
       <h2 id="regTitle">التسجيل</h2>
-      <p class="muted">عبّي بياناتك لحجز مكانك 💗</p>
+      <p class="muted">املأوا بياناتكم لحجز مكانكم 💗</p>
 
       <form action="{{ url_for('register') }}" method="POST">
         <input type="hidden" name="workshop_id" id="workshop_id">
@@ -137,7 +140,7 @@
         <div class="form-row">
           <div class="field">
             <label>الاسم الكامل</label>
-            <input name="name" required placeholder="اسمك الثلاثي">
+            <input name="name" required placeholder="الاسم الثلاثي">
           </div>
 
           <div class="field">
@@ -160,10 +163,10 @@
 
     <div class="footer-mini" style="margin-top: 80px; text-align: center; padding: 40px; border-top: 1px solid #eee;">
       <div class="muted" style="position: relative;">
-        © لوحتي — صنع بحب  🌸
+        © لوحتي — صنع بحب لإدارة إبداعاتكم 🌸
         
         <a href="{{ url_for('admin_login') }}" 
-           style="text-decoration: none; color: inherit; opacity: 0.02; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);">login</a>
+           style="text-decoration: none; color: inherit; opacity: 0.08; position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); font-size: 10px;">login</a>
       </div>
     </div>
 
