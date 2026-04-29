@@ -31,11 +31,11 @@
       <form action="{{ url_for('admin_add_gallery') }}" method="POST" enctype="multipart/form-data">
         <div class="form-row">
           <div class="field">
-            <label>اسم الطالب (اختياري)</label>
+            <label>اسم المشارك/ة (اختياري)</label>
             <input name="student_name" placeholder="مثال: شام">
           </div>
           <div class="field">
-            <label>صورة اللوحة</label>
+            <label>صورة اللوحة (يفضل JPG)</label>
             <input type="file" name="img" accept="image/*" required>
           </div>
           <div class="field full">
@@ -80,12 +80,17 @@
           </div>
 
           <div class="field third">
-            <label>عدد المقاعد</label>
+            <label>الجيل المستهدف</label>
+            <input name="age_range" placeholder="مثال: 12+ أو كبار">
+          </div>
+
+          <div class="field third">
+            <label>إجمالي المقاعد</label>
             <input name="seats_total" type="number" min="1" required placeholder="مثال: 15">
           </div>
 
           <div class="field">
-            <label>بوستر الدورة (اختياري)</label>
+            <label>بوستر الدورة (JPG)</label>
             <input type="file" name="workshop_img" accept="image/*">
           </div>
 
@@ -117,7 +122,9 @@
             <h3 class="title">{{ w.title }}</h3>
             <div class="meta">
               <span class="pill">📍 {{ w.location }}</span>
-              <span class="pill">🪑 المتبقي: {{ w.seats_left }}</span>
+              {% if w.age_range %}
+                <span class="pill">👶 الجيل: {{ w.age_range }}</span>
+              {% endif %}
             </div>
             <p class="desc">{{ w.description }}</p>
           </div>
