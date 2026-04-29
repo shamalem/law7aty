@@ -6,34 +6,24 @@
   <title>لوحتي — إبداعات الطلاب</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <style>
-    /* تنسيقات خاصة بالمعرض */
-    .gallery-header {
-      text-align: center;
-      padding: 40px 20px;
-      background-color: #fff;
-      border-radius: 16px;
-      margin-bottom: 24px;
-    }
-
-    .gallery-header h1 {
-      font-size: 2rem;
-      color: #333;
-      margin-bottom: 8px;
-    }
-
-    .art-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 24px;
-      margin-top: 20px;
+    /* نظام الأعمدة المرن لعدم قص الصور */
+    .art-masonry {
+      column-width: 300px;
+      column-gap: 20px;
+      padding: 20px 0;
     }
 
     .art-card {
+      break-inside: avoid; /* يمنع انقسام الكرت بين عمودين */
+      margin-bottom: 20px;
       background: white;
       border-radius: 20px;
       overflow: hidden;
       box-shadow: 0 4px 12px rgba(0,0,0,0.05);
       transition: transform 0.3s ease;
+      cursor: pointer;
+      display: inline-block;
+      width: 100%;
     }
 
     .art-card:hover {
@@ -42,28 +32,66 @@
 
     .art-card img {
       width: 100%;
-      height: 350px;
-      object-fit: cover;
+      height: auto; /* الحفاظ على أبعاد الصورة الأصلية */
       display: block;
     }
 
     .art-footer {
-      padding: 16px;
+      padding: 12px;
       text-align: center;
-      border-top: 1px solid #f9f9f9;
+      background: #fff;
     }
 
-    .student-name {
-      color: #666;
-      font-weight: 500;
-      font-size: 1rem;
+    /* تنسيقات البانل (Lightbox) */
+    #lightbox {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      align-items: center;
+      justify-content: center;
     }
 
-    .no-data {
-      text-align: center;
-      padding: 100px 20px;
-      color: #999;
-      font-size: 1.2rem;
+    .lightbox-content {
+      max-width: 90%;
+      max-height: 80%;
+      box-shadow: 0 0 20px rgba(255,255,255,0.1);
+    }
+
+    #lightbox-img {
+      max-width: 100%;
+      max-height: 85vh;
+      border-radius: 8px;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 20px; right: 30px;
+      color: white; font-size: 40px; cursor: pointer;
+    }
+
+    .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      color: white;
+      font-size: 50px;
+      background: none; border: none; cursor: pointer;
+      padding: 20px;
+      transition: color 0.3s;
+    }
+
+    .nav-btn:hover { color: #ffb6c1; }
+    .prev { left: 10px; }
+    .next { right: 10px; }
+
+    #lightbox-caption {
+      position: absolute;
+      bottom: 20px;
+      color: white;
+      font-size: 1.1rem;
     }
   </style>
 </head>
@@ -85,17 +113,16 @@
       </div>
     </div>
 
-    <div class="gallery-header">
+    <div class="gallery-header" style="text-align: center; padding: 40px;">
       <h1>شاركونا الإبداع 🤍</h1>
       <p>هنا نعرض نتائج ورشاتنا الفنية بريشة المبدعين</p>
     </div>
 
     {% if images|length > 0 %}
-      <div class="art-grid">
+      <div class="art-masonry">
         {% for img in images %}
-          <div class="art-card">
+          <div class="art-card" onclick="openLightbox('{{ img.image_url }}', '{{ img.student_name }}', {{ loop.index0 }})">
             <img src="{{ img.image_url }}" alt="إبداع طالب">
-            
             {% if img.student_name %}
               <div class="art-footer">
                 <span class="student-name">بريشة المبدع/ة: {{ img.student_name }}</span>
@@ -105,16 +132,61 @@
         {% endfor %}
       </div>
     {% else %}
-      <div class="no-data">
-        لا توجد لوحات في المعرض حالياً.. ترقبوا قريباً! ✨
-      </div>
+      <div class="no-data">لا توجد لوحات حالياً.. ترقبوا قريباً! ✨</div>
     {% endif %}
 
-    <div class="footer-mini" style="margin-top: 50px; text-align: center; padding: 20px; color: #aaa;">
-      <p>© لوحتي — مساحة للفن والجمال 💗</p>
+    <div id="lightbox">
+      <span class="close-btn" onclick="closeLightbox()">&times;</span>
+      <button class="nav-btn prev" onclick="changeImage(-1)">&#10094;</button>
+      <img id="lightbox-img" src="" alt="">
+      <button class="nav-btn next" onclick="changeImage(1)">&#10095;</button>
+      <div id="lightbox-caption"></div>
     </div>
 
+    <div class="footer-mini" style="margin-top: 50px; text-align: center; padding: 20px; color: #aaa;">
+        © لوحتي — صنع بحب لإدارة إبداعاتك 🌸
+        <a href="{{ url_for('admin_login') }}" 
+           style="text-decoration: none; color: inherit; opacity: 0.08; position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); font-size: 10px;">login</a>
+    </div>
   </div>
+
+  <script>
+    // قائمة الصور للتنقل
+    const imagesList = [
+      {% for img in images %}
+      { url: '{{ img.image_url }}', name: '{{ img.student_name }}' }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    let currentIndex = 0;
+
+    function openLightbox(url, name, index) {
+      currentIndex = index;
+      document.getElementById('lightbox-img').src = url;
+      document.getElementById('lightbox-caption').innerText = name ? "بريشة المبدع/ة: " + name : "";
+      document.getElementById('lightbox').style.display = 'flex';
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').style.display = 'none';
+    }
+
+    function changeImage(step) {
+      currentIndex += step;
+      if (currentIndex >= imagesList.length) currentIndex = 0;
+      if (currentIndex < 0) currentIndex = imagesList.length - 1;
+      
+      const newImg = imagesList[currentIndex];
+      document.getElementById('lightbox-img').src = newImg.url;
+      document.getElementById('lightbox-caption').innerText = newImg.name ? "بريشة المبدع/ة: " + newImg.name : "";
+    }
+
+    // إغلاق عند الضغط خارج الصورة
+    window.onclick = function(event) {
+      const lb = document.getElementById('lightbox');
+      if (event.target == lb) closeLightbox();
+    }
+  </script>
 
 </body>
 </html>
