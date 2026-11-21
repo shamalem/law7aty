@@ -69,6 +69,12 @@ def init_db():
     )
     """)
 
+    # أعمدة متابعة التسجيلات (تواصل، إلغاء، دفع)
+    cur.execute("ALTER TABLE registrations ADD COLUMN IF NOT EXISTS contacted BOOLEAN DEFAULT FALSE")
+    cur.execute("ALTER TABLE registrations ADD COLUMN IF NOT EXISTS canceled BOOLEAN DEFAULT FALSE")
+    cur.execute("ALTER TABLE registrations ADD COLUMN IF NOT EXISTS paid BOOLEAN DEFAULT FALSE")
+    cur.execute("ALTER TABLE registrations ADD COLUMN IF NOT EXISTS paid_amount NUMERIC")
+
     # جدول معرض إبداعات الطلاب
     cur.execute("""
     CREATE TABLE IF NOT EXISTS student_gallery (
@@ -284,6 +290,62 @@ def admin_view_registrations(workshop_id):
     cur.close()
     conn.close()
     return render_template("registrations.html", workshop=workshop, registrations=regs)
+
+@app.route("/admin/registrations/<int:reg_id>/toggle", methods=["POST"])
+@admin_required
+def admin_toggle_registration(reg_id):
+    field = request.form.get("field")
+    if field not in ("contacted", "canceled", "paid"):
+        return redirect(url_for("admin_page"))
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        f"UPDATE registrations SET {field} = NOT COALESCE({field}, FALSE) WHERE id = %s RETURNING workshop_id",
+        (reg_id,),
+    )
+    row = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    if row:
+        return redirect(url_for("admin_view_registrations", workshop_id=row["workshop_id"]))
+    return redirect(url_for("admin_page"))
+
+@app.route("/admin/registrations/<int:reg_id>/paid-amount", methods=["POST"])
+@admin_required
+def admin_set_paid_amount(reg_id):
+    raw = request.form.get("paid_amount", "").strip().replace(",", ".")
+    try:
+        amount = float(raw) if raw else None
+    except ValueError:
+        amount = None
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE registrations SET paid_amount = %s WHERE id = %s RETURNING workshop_id",
+        (amount, reg_id),
+    )
+    row = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    if row:
+        return redirect(url_for("admin_view_registrations", workshop_id=row["workshop_id"]))
+    return redirect(url_for("admin_page"))
+
+@app.route("/admin/registrations/<int:reg_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_registration(reg_id):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM registrations WHERE id = %s RETURNING workshop_id", (reg_id,))
+    row = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    if row:
+        return redirect(url_for("admin_view_registrations", workshop_id=row["workshop_id"]))
+    return redirect(url_for("admin_page"))
 
 @app.route("/admin/logout")
 def admin_logout():
