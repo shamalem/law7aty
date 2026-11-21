@@ -218,6 +218,20 @@ def admin_delete_gallery():
         conn.close()
     return redirect(url_for("admin_page"))
 
+@app.route("/admin/gallery/rename", methods=["POST"])
+@admin_required
+def admin_rename_gallery():
+    post_id = request.form.get("post_id")
+    name = request.form.get("student_name", "").strip()
+    if post_id:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("UPDATE student_gallery SET student_name = %s WHERE id = %s", (name, int(post_id)))
+        conn.commit()
+        cur.close()
+        conn.close()
+    return redirect(url_for("admin_page"))
+
 @app.route("/admin/workshops/add", methods=["POST"])
 @admin_required
 def admin_add_workshop():

@@ -52,7 +52,11 @@
         <div class="card" style="padding: 5px;">
           <img src="{{ item.image_url }}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 8px;">
           <div style="text-align: center; margin-top: 5px;">
-            <p class="muted" style="font-size: 0.7rem;">{{ item.student_name or 'بدون اسم' }}</p>
+            <form action="{{ url_for('admin_rename_gallery') }}" method="POST" style="margin-bottom: 5px;">
+                <input type="hidden" name="post_id" value="{{ item.id }}">
+                <input name="student_name" value="{{ item.student_name or '' }}" placeholder="اسم الفنان/ة" style="width: 100%; font-size: 0.7rem; padding: 4px; margin-bottom: 4px; box-sizing: border-box;">
+                <button class="btn small" type="submit" style="width: 100%; font-size: 0.6rem;">حفظ الاسم</button>
+            </form>
             <form action="{{ url_for('admin_delete_gallery') }}" method="POST">
                 <input type="hidden" name="post_id" value="{{ item.id }}">
                 <button class="btn danger small" type="submit" style="width: 100%; font-size: 0.6rem;">حذف</button>
