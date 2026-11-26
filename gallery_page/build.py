@@ -1,14 +1,20 @@
 """Build the static gallery page from the photos in gallery_photos/.
 
 Usage: python3 gallery_page/build.py
+If gallery_photos/gallery.csv (an export of the student_gallery table) exists,
+its rows give the order and the artist names; each row is matched to a photo
+by the file name at the end of image_url. Photos with no row come after them,
+named from their file name.
 Writes gallery_page/index.html and gallery_page/files.json
 (files.json maps each published photo path to its source file).
 """
+import csv
 import html
 import json
 import re
 import subprocess
 from pathlib import Path
+from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parent.parent
 PHOTOS = ROOT / "gallery_photos"
@@ -41,11 +47,31 @@ def added_time(p: Path) -> int:
 def main():
     photos = [p for p in PHOTOS.iterdir() if p.suffix.lower() in EXTS] if PHOTOS.exists() else []
     photos.sort(key=lambda p: (-added_time(p), p.name))
+    ordered, used = [], set()  # (photo, artist name)
+    table = PHOTOS / "gallery.csv"
+    if table.exists():
+        with table.open(encoding="utf-8-sig", newline="") as f:
+            rows = sorted(csv.DictReader(f), key=lambda r: -int(r.get("id") or 0))
+        missing = []
+        for r in rows:
+            fname = unquote((r.get("image_url") or "").rsplit("/", 1)[-1]).lower()
+            # exact name, or a download that dropped/added the timestamp prefix
+            p = next((q for q in photos if q.name.lower() == fname), None) or next(
+                (q for q in photos if fname.endswith(q.name.lower()) or q.name.lower().endswith(fname)), None)
+            if p is None or p in used:
+                missing.append(fname)
+                continue
+            used.add(p)
+            ordered.append((p, (r.get("student_name") or "").strip()))
+        if missing:
+            print("no photo file for:", ", ".join(missing))
+    ordered += [(p, artist_name(p.stem)) for p in photos if p not in used]
+
     items, files = [], {}
-    for i, p in enumerate(photos, 1):
+    for i, (p, name) in enumerate(ordered, 1):
         pub = f"photos/{i:03d}{p.suffix.lower()}"
         files[pub] = str(p.relative_to(ROOT))
-        items.append({"src": pub, "name": artist_name(p.stem)})
+        items.append({"src": pub, "name": name})
 
     template = (OUT / "template.html").read_text(encoding="utf-8")
     page = (template
