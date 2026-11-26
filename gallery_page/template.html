@@ -90,12 +90,11 @@
   }
   .ig svg { width: 18px; height: 18px; }
 
-  .wall { column-width: 260px; column-gap: 18px; }
+  .wall { max-width: 620px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
   .art {
     display: block; width: 100%;
-    break-inside: avoid;
-    margin: 0 0 18px;
-    padding: 8px;
+    margin: 0;
+    padding: 10px;
     background: var(--frame);
     border: 1px solid var(--line);
     border-radius: 4px;
@@ -111,7 +110,7 @@
   .art .cap {
     display: block;
     padding: 10px 4px 4px;
-    font-size: .92rem; color: var(--soft);
+    font-size: 1rem; color: var(--soft); text-align: center;
   }
   .art .cap b { color: var(--ink); font-weight: 700; }
 
@@ -147,9 +146,9 @@
   .lb .next { left: 4px; }
 
   @media (max-width: 520px) {
-    .wall { column-width: 150px; column-gap: 12px; }
-    .art { margin-bottom: 12px; padding: 6px; }
-    .art .cap { font-size: .85rem; padding: 8px 2px 2px; }
+    .wall { gap: 20px; }
+    .art { padding: 8px; }
+    .art .cap { font-size: .95rem; padding: 8px 2px 2px; }
     .lb .nav { display: none; }
   }
   @media (prefers-reduced-motion: reduce) {
