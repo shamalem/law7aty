@@ -12,6 +12,7 @@ import csv
 import html
 import json
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from urllib.parse import unquote
@@ -81,6 +82,24 @@ def main():
     (OUT / "index.html").write_text(page, encoding="utf-8")
     files["logo.png"] = "gallery_page/logo-square.png"
     (OUT / "files.json").write_text(json.dumps(files, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    # Standalone copy for static hosting (GitHub Pages etc.): full HTML document + files.
+    site = OUT / "site"
+    shutil.rmtree(site, ignore_errors=True)
+    (site / "photos").mkdir(parents=True)
+    for pub, src in files.items():
+        shutil.copy(ROOT / src, site / pub)
+    head, _, body = page.partition("</style>")
+    (site / "index.html").write_text(
+        '<!doctype html>\n<html lang="ar" dir="rtl">\n<head>\n<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
+        '<link rel="icon" href="logo.png">\n'
+        + head + "\n  *, *::before, *::after { box-sizing: border-box; }\n"
+        "  body { margin: 0; }\n  img { max-width: 100%; }\n</style>\n</head>\n<body>\n"
+        + body + "\n</body>\n</html>\n",
+        encoding="utf-8",
+    )
+    (site / ".nojekyll").write_text("")
     print(f"{len(items)} photos")
 
 
