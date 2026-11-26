@@ -34,6 +34,22 @@ def artist_name(stem: str) -> str:
     return s if re.search(r"[^\W\d_]", s) else ""
 
 
+def optimize(src: Path, dst: Path, max_side: int = 1400) -> None:
+    """Web copy: upright, at most max_side px, progressive JPEG."""
+    from PIL import Image, ImageOps
+    with Image.open(src) as im:
+        im = ImageOps.exif_transpose(im)
+        if im.mode in ("RGBA", "LA", "P"):
+            im = im.convert("RGBA")
+            bg = Image.new("RGB", im.size, (255, 255, 255))
+            bg.paste(im, mask=im.split()[-1])
+            im = bg
+        else:
+            im = im.convert("RGB")
+        im.thumbnail((max_side, max_side), Image.LANCZOS)
+        im.save(dst, "JPEG", quality=82, optimize=True, progressive=True)
+
+
 def added_time(p: Path) -> int:
     try:
         out = subprocess.run(
@@ -69,9 +85,14 @@ def main():
     ordered += [(p, artist_name(p.stem)) for p in photos if p not in used]
 
     items, files = [], {}
+    web = OUT / "web_photos"
+    shutil.rmtree(web, ignore_errors=True)
+    web.mkdir()
     for i, (p, name) in enumerate(ordered, 1):
-        pub = f"photos/{i:03d}{p.suffix.lower()}"
-        files[pub] = str(p.relative_to(ROOT))
+        pub = f"photos/{i:03d}.jpg"
+        out = web / f"{i:03d}.jpg"
+        optimize(p, out)
+        files[pub] = str(out.relative_to(ROOT))
         items.append({"src": pub, "name": name})
 
     template = (OUT / "template.html").read_text(encoding="utf-8")
