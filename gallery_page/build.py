@@ -79,7 +79,7 @@ def main():
             .replace("__COUNT__", str(len(items)))
             .replace("__INSTAGRAM__", html.escape(INSTAGRAM)))
     (OUT / "index.html").write_text(page, encoding="utf-8")
-    files["logo.png"] = "static/logo.png"
+    files["logo.png"] = "gallery_page/logo-square.png"
     (OUT / "files.json").write_text(json.dumps(files, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{len(items)} photos")
 
