@@ -3,8 +3,8 @@
 Usage: python3 gallery_page/build.py
 If gallery_photos/gallery.csv (an export of the student_gallery table) exists,
 its rows give the order and the artist names; each row is matched to a photo
-by the file name at the end of image_url. Photos with no row come after them,
-named from their file name.
+by the file name at the end of image_url. Photos with no row (added after the export)
+come first, named from their file name.
 Writes gallery_page/index.html and gallery_page/files.json
 (files.json maps each published photo path to its source file).
 """
@@ -82,7 +82,8 @@ def main():
             ordered.append((p, (r.get("student_name") or "").strip()))
         if missing:
             print("no photo file for:", ", ".join(missing))
-    ordered += [(p, artist_name(p.stem)) for p in photos if p not in used]
+    # Photos added after the CSV export are the newest, so they go first.
+    ordered = [(p, artist_name(p.stem)) for p in photos if p not in used] + ordered
 
     items, files = [], {}
     web = OUT / "web_photos"
